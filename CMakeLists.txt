@@ -22,9 +22,11 @@ endif()
 
 set(PDE_SOLVER_SRCS
     sde.hpp
-    cours1.hpp
-    cours1.cpp
+    RandomNumbers.hpp
+    RandomNumbers.cpp
     sde.cpp
+    Matrix.hpp
+    Matrix.cpp
     main.cpp)
 
 set(PDE_SOLVER_TARGET pde_solver)
