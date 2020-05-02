@@ -29,13 +29,43 @@ int main(int argc, char* argv[])
 	RandomGenerator* gtr = new NormalBoxMuller(ptr,0.,1.);
 	
 //for N Dim (3 assets to start)
+std::vector<std::vector<double>> InitialSpot_vector = {{120},{100},{80}};
+
 std::vector<std::vector<double>> Sigma_vector = {{0.25},{0.15},{0.3}};
+
 std::vector<std::vector<double>> Mu_vector = {{0.05},{0.015},{0.005}};
+
 std::vector<std::vector<double>> Correl_mat = {{1,-0.2,0.4},
 											   {-0.2,1,0.2},
 											   {0.4,0.2,1}};
-
-
+											   
+std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
+//////////////////////////////////////////////////////////////////////////////////////
+//Test Van der Corput
+	UniformGenerator* qsr = new VanDerCorput(2,1);
+	
+	double test = 0.;
+	
+	for(size_t i = 0;i<10;++i)
+	{
+		test = qsr->generate();
+		std::cout << "Generated quasi rdm nbr is: " << test << std::endl;
+	}
+	delete qsr;
+///////////////////////////////////////////////////////////////////////////////////////
+//Test payoff
+	matrix W(Weights_mat);
+	matrix S(InitialSpot_vector);
+	
+	PayOffBasket* bsktcall = new PayOffBasketCall(W, S,100.);
+	PayOffBasket* bsktcallCV = new PayOffControlVarBasketCall(W, S,100.);
+	double payofftest = bsktcall->operator()(W,S);
+	double payofftest2 = bsktcallCV->operator()(W,S);
+	
+	std::cout << "Payoff for the basket call is " << payofftest << std::endl;
+	std::cout << "Payoff for the basket call Control Variate is " << payofftest2 << std::endl;
+	delete bsktcall;
+	delete bsktcallCV;
 ///////////////////////////////////////////////////////////////////////////////////////
 //TEST MATRIX CLASS	
 
@@ -132,7 +162,7 @@ std::vector<std::vector<double>> Correl_mat = {{1,-0.2,0.4},
 	// }
 	
 	//RandomProcess* rdm = new Brownian1D(gtr);
-	
+///////////////////////////////////////////////////////////////////////////////////////////////	
 //Test BS1D
 
 	// BSEuler1D dynamics = BSEuler1D(gtr, spot, rate, vol);
@@ -195,7 +225,6 @@ std::vector<std::vector<double>> Correl_mat = {{1,-0.2,0.4},
 	
 	delete ngnr;
 	delete gvec;
-	
-	
+
 	return 0;
 }

@@ -100,8 +100,44 @@ double EcuyerCombined::generate()
 
 	return result;
 };
+//////////////////////////////////////////////////////////////////////
+QuasiGenerator::QuasiGenerator(myLong inputseed):
+	seed(inputseed)
+{
+	current = inputseed;
+};
+VanDerCorput::VanDerCorput(int inputbase,myLong inputseed):
+	QuasiGenerator(inputseed),
+	base(inputbase)
+{
+};
 
+double VanDerCorput::generate()
+{
+	n = current;
+	q = 0.;
+	bk = (double) 1/base;
+	
+	while(n>0)
+	{
+		q += (n % base)*bk;
+		// std::cout << "modula =  " << n % base << std::endl;
+		// std::cout << "q =  " << q << std::endl;
+		n /= base;
+		// std::cout << "n = " << n << std::endl;
+		bk /= base;
+		// std::cout << "bk = " << bk << std::endl;
+	}
+	
+	current+=1;
+	return q;
+};
 
+// Kakutani::Kakutani(myLong inputseed):
+	// QuasiGenerator(inputseed)
+// {
+// };
+//////////////////////////////////////////////////////////////////////
 const long double PI = 3.141592653589793238L;
 
 Normal::Normal(UniformGenerator* inputugnr,double inputMu, double inputSigma) : Mu(inputMu),ugnr(inputugnr)

@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <ostream>
-#include "Matrix.hpp"
+#include "payoff.hpp"
 
 typedef unsigned unsigned long  myLong; 
 
@@ -93,6 +93,60 @@ class EcuyerCombined: public PseudoGenerator
 		LinearCongruential firstLinear;
 		LinearCongruential secondLinear;
 };
+//////////////////////////////////////////////////////////////////////
+class QuasiGenerator: public UniformGenerator
+{
+	public:
+	
+		QuasiGenerator(myLong inputseed);
+		QuasiGenerator(){};
+		~QuasiGenerator(){};
+		
+		//double generate();
+		//Bien de garder en mémoire le seed
+		//mean(myLong nbsim);
+	
+	protected:
+	
+		myLong seed;
+	
+	
+};
+class VanDerCorput: public QuasiGenerator
+{
+	public:
+	
+		VanDerCorput(int inputbase = 2,myLong inputseed = 1);
+		~VanDerCorput(){};
+		
+		double generate();
+ 
+	private:
+	
+		int n;
+		int base;
+		double bk;
+		double q;
+	
+};
+// class Kakutani: public QuasiGenerator
+// {
+	// public:
+	
+		// Kakutani(myLong inputseed);
+		// ~Kakutani(){};
+		
+		// double generate();
+ 
+	// private:
+	
+		// int n;
+		// int base;
+		// double bk;
+		// double q;
+	
+// };
+//////////////////////////////////////////////////////////////////////
 
 class ContinuousGenerator :public RandomGenerator
 {
