@@ -282,4 +282,40 @@ matrix VarCovarMatrix(matrix vol,matrix correl)
 	first_step*=diagvol; //previous result * diag vol
 	first_step.Print();
 	return first_step;
-};             
+};         
+
+//We assume matrix is a column vector
+double matrix::mean()
+{
+
+	double sum = 0;
+	
+	for(size_t i = 0; i < m_nb_rows; ++i)
+	{
+		sum += m_data[i][0];
+	}
+	
+	// std::cout << "mean via fonction mean : " << sum/nbSim << std::endl;
+	return sum/m_nb_rows;
+};
+
+//We assume matrix is a column vector
+double matrix::variance()
+{
+	double sum = 0.;
+	double _mean = 0.;
+	
+	_mean = mean();
+	
+	double sum2 = 0.;
+	
+	for(size_t i = 0; i < m_nb_rows; ++i)
+	{
+		sum2 += m_data[i][0]*m_data[i][0];
+	}
+	
+	sum2 /= (m_nb_rows-1);
+	sum2 -= _mean*_mean;
+	
+	return sum2 ;
+};

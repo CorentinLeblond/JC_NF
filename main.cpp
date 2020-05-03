@@ -68,7 +68,12 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	delete bsktcallCV;
 ///////////////////////////////////////////////////////////////////////////////////////
 //TEST MATRIX CLASS	
-
+		matrix y({{120},{100},{80}});
+		double test_mean = y.mean();
+		double test_variance = y.variance();
+		
+		std::cout << "Mean is " << test_mean << std::endl;
+		std::cout << "Variance is " << test_variance << std::endl;
 		// matrix y(3,3);
 		// y(0,0) = 4.;
 		// y(1,0)  = 12.;
