@@ -16,6 +16,9 @@ class matrix
 			matrix Cholesky();
 			void Print();
 			
+			double mean();
+			double variance();
+			
 			double& operator()(std::size_t i, std::size_t j);
 			matrix& operator+=(const matrix& rhs);
 			matrix& operator*=(const matrix& rhs);
