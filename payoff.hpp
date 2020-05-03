@@ -45,7 +45,7 @@ class PayOffBasket
 		PayOffBasket(){};
 		~PayOffBasket(){};
 		
-		virtual double operator() (matrix Weights, matrix S,const double& df = 1) = 0;
+		virtual double operator() (matrix S,const double& df = 1) = 0;
 		
 	protected:
 	
@@ -61,7 +61,7 @@ class PayOffBasketCall : public PayOffBasket
 		~PayOffBasketCall() {};
 
 		// Virtual function is now over-ridden (not pure-virtual anymore)
-		double operator() (matrix Weights, matrix S,const double& df = 1);
+		double operator() (matrix S,const double& df = 1);
 	  
 };
 
@@ -73,6 +73,6 @@ class PayOffControlVarBasketCall : public PayOffBasket
 		~PayOffControlVarBasketCall(){};
 
 		// Virtual function is now over-ridden (not pure-virtual anymore)
-		virtual double operator() (matrix Weights, matrix S,const double& df = 1);
+		virtual double operator() (matrix S,const double& df = 1);
 	  
 };
