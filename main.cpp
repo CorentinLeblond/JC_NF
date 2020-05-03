@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 	RandomGenerator* gtr = new NormalBoxMuller(ptr,0.,1.);
 	
 //for N Dim (3 assets to start)
-std::vector<std::vector<double>> InitialSpot_vector = {{120},{100},{80}};
+std::vector<std::vector<double>> Spot_vector = {{120},{100},{80}};
 
 std::vector<std::vector<double>> Sigma_vector = {{0.25},{0.15},{0.3}};
 
@@ -55,7 +55,7 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 ///////////////////////////////////////////////////////////////////////////////////////
 //Test payoff
 	matrix W(Weights_mat);
-	matrix S(InitialSpot_vector);
+	matrix S(Spot_vector);
 	
 	PayOffBasket* bsktcall = new PayOffBasketCall(W, S,100.);
 	PayOffBasket* bsktcallCV = new PayOffControlVarBasketCall(W, S,100.);
@@ -180,6 +180,25 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	dynamics.Simulate(startTime, endTime, nbsteps);
 	SinglePath* path1 = dynamics.GetPath(0);
 	SinglePath* path2 = dynamics.GetPath(1);
+
+
+//Test BSND
+
+	UniformGenerator* ugen = new EcuyerCombined();
+	RandomGenerator* ngen = new NormalBoxMuller(ugen, 0., 1.);
+
+	matrix spot_m(Spot_vector);
+	matrix Sigma(Sigma_vector);
+	matrix Nu(Mu_vector);
+	matrix Correl(Correl_mat);
+
+	matrix CovarMatrix = VarCovarMatrix(Sigma, Correl);
+
+	BSEulerND dynamics = BSEulerND(ngen, spot_m, Nu, Sigma, Correl,
+		CovarMatrix);
+	dynamics.Simulate(startTime, endTime, nbsteps);
+	matrix chemin = dynamics.GetAllPaths();
+	chemin.Print();
 	// std::cout << "debut print vector" << std::endl;
 	// for(size_t i = 0; i< nbsteps;++i)
 	// {

@@ -34,6 +34,27 @@ SinglePath* RandomProcess::GetPath(int pos)
 	return Paths[pos];
 }
 
+matrix RandomProcess::GetAllPaths() {
+
+
+	std::vector<double> element = Paths[0]->GetAllValues();
+	matrix res(Paths.size(), element.size());
+	for (size_t single = 0; single < Paths.size(); single++) {
+
+		for (size_t i = 0; i < element.size(); i++) {
+
+			res(single, i) = element[i];
+
+		}
+
+		element = Paths[single]->GetAllValues();
+
+	}
+
+	return res;
+
+};
+
 ////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -147,6 +168,70 @@ void BSEuler2D::Simulate(double startTime,double endTime,size_t nbSteps)
 
 	// delete Path;
 		
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlackScholesND::BlackScholesND(RandomGenerator* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+	matrix varcov)
+	:m_Gen(N_gen), V_spot(spot_vec), V_Rate(rate_vec), V_vol(Sigma_vec), m_corr_matrix(corr_matrix), m_varcov(varcov),
+	RandomProcess(m_Gen, V_spot.nb_rows())
+{};
+
+BSEulerND::BSEulerND(RandomGenerator* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+	matrix varcov) :
+	BlackScholesND(N_gen, spot_vec, rate_vec, Sigma_vec, corr_matrix, varcov)
+{ };
+
+
+void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
+{
+	Paths.clear();
+	size_t assets = V_spot.nb_rows();
+	double dt = (endTime - startTime) / nbSteps;
+	Brownian.Resize(assets, nbSteps);
+	matrix mean_vector(assets, 1);
+	matrix ones(assets, 1);
+
+	for (size_t i = 0; i < assets; ++i)
+	{
+		//create a vector full of one in order to apply a matrixwise 
+		ones(i, 0) = 1.;
+		//create the mean_vector at each time step of mu*dt
+		mean_vector(i, 0) = V_Rate(i, 0) * dt;
+	}
+
+	for (size_t t = 0; t < nbSteps; ++t)
+	{
+		matrix X = GaussianVectorCholesky(m_Gen, mean_vector, V_vol, m_corr_matrix,
+			m_varcov).CorrelatedGaussianVector();
+
+		for (size_t i = 0; i < assets; ++i)
+		{
+			//create the matrix of all brownian motion 
+			Brownian(i, t) = X(i, 0);
+		}
+
+	}
+
+	SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
+	for (size_t i = 0; i < assets; ++i)
+	{
+		double last_spot = V_spot(i, 0);
+		double next_spot = 0.;
+		Path->InsertValue(last_spot);
+		for (size_t t = 0; t < nbSteps; ++t)
+		{
+			next_spot = last_spot * (1 + Brownian(i, t));
+			Path->InsertValue(next_spot);
+			last_spot = next_spot;
+
+		}
+
+		Paths.push_back(Path);
+	}
+
 };
 
 // void export_csv(std::string f_name) const
