@@ -1,3 +1,4 @@
+#pragma once 
 #include <vector>
 #include <iostream>
 #include <cmath>
@@ -31,7 +32,7 @@ class SinglePath
 class RandomProcess
 {
 	public:
-	
+		RandomProcess(){};
 		RandomProcess(RandomGenerator* gen, int dim);//dim taille du vector chaque élément est un path entier, 
 		//chq élément est un singlepath
 		~RandomProcess(){};
@@ -120,7 +121,7 @@ class BlackScholesND : public RandomProcess
 public:
 
 	BlackScholesND() {};
-	BlackScholesND(RandomGenerator* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+	BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
 		matrix varcov);
 	~BlackScholesND() {};
 
@@ -131,7 +132,7 @@ protected:
 
 	matrix V_spot;
 	matrix V_Rate;
-	RandomGenerator* m_Gen;
+	Normal* m_Gen;
 	matrix V_vol;
 	matrix m_corr_matrix;
 	matrix m_varcov;
@@ -152,7 +153,7 @@ class BSEulerND : public BlackScholesND
 {
 public:
 	BSEulerND() {};
-	BSEulerND(RandomGenerator* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+	BSEulerND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
 		matrix varcov);
 	~BSEulerND() {};
 	void Simulate(double startTime, double EndTime, size_t nbSteps);

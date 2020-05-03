@@ -202,8 +202,8 @@ GaussianVectorCholesky::GaussianVectorCholesky(Normal* inputngnr,matrix inputMu,
 	: GaussianVector(inputngnr, inputMu,  inputSigma,  inputcorrel, inputvarcovar)
 {
 	LowerCholesly = CovarMatrix.Cholesky();
-	std::cout << "Lower cholesky" <<std::endl;
-	LowerCholesly.Print();
+	//std::cout << "Lower cholesky" <<std::endl;
+	//LowerCholesly.Print();
 };
 
 matrix GaussianVectorCholesky::CorrelatedGaussianVector()
@@ -214,17 +214,17 @@ matrix GaussianVectorCholesky::CorrelatedGaussianVector()
 	{
 		IndependentGaussian(i,0) = Ngnr->generate();
 	}
-	std::cout << "IndependentGaussian1:"<<std::endl;
-	IndependentGaussian.Print();
-	std::cout << "IndependentGaussian ROWS: " << IndependentGaussian.nb_rows()<<std::endl;
-	std::cout << "IndependentGaussian COLS: " << IndependentGaussian.nb_cols()<<std::endl;
-	std::cout << "LowerC:"<<std::endl;
+	//std::cout << "IndependentGaussian1:"<<std::endl;
+	//IndependentGaussian.Print();
+	//std::cout << "IndependentGaussian ROWS: " << IndependentGaussian.nb_rows()<<std::endl;
+	//std::cout << "IndependentGaussian COLS: " << IndependentGaussian.nb_cols()<<std::endl;
+	//std::cout << "LowerC:"<<std::endl;
 
 	//Then, we only do the tranformation using the lowercholeskly and the Mu vector already available
 	
 	matrix a = LowerCholesly*IndependentGaussian;
 	
-	a.Print();
+	//a.Print();
 	a += Nu;
 	// Our independend Gaussian vector is now a correlated gaussian vector that we return
 	

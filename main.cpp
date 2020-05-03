@@ -1,4 +1,5 @@
 #include "sde.hpp"
+#include "MonteCarlo.h"
 #include <iostream>
 #include <fstream>
 
@@ -59,21 +60,20 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	
 	PayOffBasket* bsktcall = new PayOffBasketCall(W, S,100.);
 	PayOffBasket* bsktcallCV = new PayOffControlVarBasketCall(W, S,100.);
-	double payofftest = bsktcall->operator()(W,S);
-	double payofftest2 = bsktcallCV->operator()(W,S);
+	double payofftest = bsktcall->operator()(S);
+	double payofftest2 = bsktcallCV->operator()(S);
 	
 	std::cout << "Payoff for the basket call is " << payofftest << std::endl;
 	std::cout << "Payoff for the basket call Control Variate is " << payofftest2 << std::endl;
-	delete bsktcall;
-	delete bsktcallCV;
+
 ///////////////////////////////////////////////////////////////////////////////////////
 //TEST MATRIX CLASS	
-		matrix y({{120},{100},{80}});
-		double test_mean = y.mean();
-		double test_variance = y.variance();
+		//matrix y({{120},{100},{80}});
+		//double test_mean = y.mean();
+		//double test_variance = y.variance();
 		
-		std::cout << "Mean is " << test_mean << std::endl;
-		std::cout << "Variance is " << test_variance << std::endl;
+		//std::cout << "Mean is " << test_mean << std::endl;
+		//std::cout << "Variance is " << test_variance << std::endl;
 		// matrix y(3,3);
 		// y(0,0) = 4.;
 		// y(1,0)  = 12.;
@@ -176,16 +176,16 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	
 //Test BS2D
 
-	BSEuler2D dynamics = BSEuler2D(gtr, spot1,spot2, rate1,rate2, vol1,vol2,rho);
-	dynamics.Simulate(startTime, endTime, nbsteps);
-	SinglePath* path1 = dynamics.GetPath(0);
-	SinglePath* path2 = dynamics.GetPath(1);
+	//BSEuler2D dynamics = BSEuler2D(gtr, spot1,spot2, rate1,rate2, vol1,vol2,rho);
+	//dynamics.Simulate(startTime, endTime, nbsteps);
+	//SinglePath* path1 = dynamics.GetPath(0);
+	//SinglePath* path2 = dynamics.GetPath(1);
 
 
 //Test BSND
 
 	UniformGenerator* ugen = new EcuyerCombined();
-	RandomGenerator* ngen = new NormalBoxMuller(ugen, 0., 1.);
+	Normal* ngen = new NormalBoxMuller(ugen, 0., 1.);
 
 	matrix spot_m(Spot_vector);
 	matrix Sigma(Sigma_vector);
@@ -194,11 +194,21 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 
 	matrix CovarMatrix = VarCovarMatrix(Sigma, Correl);
 
-	BSEulerND dynamics = BSEulerND(ngen, spot_m, Nu, Sigma, Correl,
+	RandomProcess* path = new BSEulerND(ngen, S, Nu, Sigma, Correl,
 		CovarMatrix);
-	dynamics.Simulate(startTime, endTime, nbsteps);
-	matrix chemin = dynamics.GetAllPaths();
-	chemin.Print();
+
+	size_t N = 10000;
+
+	EuropeanBasket_MonteCarlo MC(N, bsktcall, path);
+	MC.Simulate(startTime,endTime,nbsteps);
+	double priceMC = MC.GetPrice(rate, endTime);
+	std::cout << priceMC << std::endl;
+	//dynamics.Simulate(startTime, endTime, nbsteps);
+	//matrix chemin = dynamics.GetAllPaths();
+	//chemin.Print();
+
+
+
 	// std::cout << "debut print vector" << std::endl;
 	// for(size_t i = 0; i< nbsteps;++i)
 	// {
@@ -208,29 +218,29 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //Test GaussianVector generation
 
-	matrix Sigma(Sigma_vector);
-	matrix Nu(Mu_vector);
-	matrix Correl(Correl_mat);
+	//matrix Sigma(Sigma_vector);
+	//matrix Nu(Mu_vector);
+	//matrix Correl(Correl_mat);
 
-	matrix CovarMatrix = VarCovarMatrix(Sigma,Correl);
-	
-	Normal* ngnr = new NormalBoxMuller(ptr,0.,1.);
-	
-	// bool testinvertible = isInvertible(CovarMatrix,CovarMatrix.nb_rows());
-	// std::cout<< "test invertivle returns: " << testinvertible << std::endl;
-	GaussianVector* gvec;
-	
-	// if(testinvertible == 1)
-	gvec = new GaussianVectorCholesky(ngnr,Nu,Sigma,Correl,CovarMatrix);
-	// else
-		// gvec = new GaussianVectorDiag(ngnr,Nu,Sigma,Correl,CovarMatrix);
+	//matrix CovarMatrix = VarCovarMatrix(Sigma,Correl);
+	//
+	//Normal* ngnr = new NormalBoxMuller(ptr,0.,1.);
+	//
+	//// bool testinvertible = isInvertible(CovarMatrix,CovarMatrix.nb_rows());
+	//// std::cout<< "test invertivle returns: " << testinvertible << std::endl;
+	//GaussianVector* gvec;
+	//
+	//// if(testinvertible == 1)
+	//gvec = new GaussianVectorCholesky(ngnr,Nu,Sigma,Correl,CovarMatrix);
+	//// else
+	//	// gvec = new GaussianVectorDiag(ngnr,Nu,Sigma,Correl,CovarMatrix);
 
-	matrix output = gvec->CorrelatedGaussianVector();
-	std::cout << "Output" <<std::endl;
-	output.Print();
-	matrix output2 = gvec->CorrelatedGaussianVector();
-	std::cout << "Output2" <<std::endl;
-	output2.Print();
+	//matrix output = gvec->CorrelatedGaussianVector();
+	//std::cout << "Output" <<std::endl;
+	//output.Print();
+	//matrix output2 = gvec->CorrelatedGaussianVector();
+	//std::cout << "Output2" <<std::endl;
+	//output2.Print();
 ////////////////////////////////////////////////////////////////////////////////////////	
 //TEST CSV
 
@@ -244,11 +254,14 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	
 	delete ptr;
 	delete gtr;
-	delete path1;
-	delete path2;
+	//delete path1;
+	//delete path2;
+
+	delete bsktcall;
+	delete bsktcallCV;
 	
-	delete ngnr;
-	delete gvec;
+	//delete ngnr;
+	//delete gvec;
 
 	return 0;
 }

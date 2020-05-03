@@ -173,13 +173,13 @@ void BSEuler2D::Simulate(double startTime,double endTime,size_t nbSteps)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BlackScholesND::BlackScholesND(RandomGenerator* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+BlackScholesND::BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
 	matrix varcov)
 	:m_Gen(N_gen), V_spot(spot_vec), V_Rate(rate_vec), V_vol(Sigma_vec), m_corr_matrix(corr_matrix), m_varcov(varcov),
 	RandomProcess(m_Gen, V_spot.nb_rows())
 {};
 
-BSEulerND::BSEulerND(RandomGenerator* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+BSEulerND::BSEulerND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
 	matrix varcov) :
 	BlackScholesND(N_gen, spot_vec, rate_vec, Sigma_vec, corr_matrix, varcov)
 { };

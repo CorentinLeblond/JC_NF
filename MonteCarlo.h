@@ -1,3 +1,4 @@
+#pragma once
 #include  <vector>
 #include  "payoff.hpp"
 #include  "sde.hpp"
@@ -12,7 +13,7 @@ public:
 	~EuropeanVanilla_MonteCarlo() {};
 	EuropeanVanilla_MonteCarlo(size_t nbSimu, PayOff* Payoff, RandomProcess* diffusion);
 	void Simulate(double start, double end, size_t steps);
-	double GetPrice();
+	double GetPrice(double&r, double&T);
 	double GetVariance();
 
 protected:
@@ -21,7 +22,7 @@ protected:
 	RandomProcess* m_diffusion;
 	double MC_price;
 	double MC_variance;
-	std::vector<double> simulated_price;
+	matrix simulated_price;
 
 
 };
@@ -35,7 +36,7 @@ public:
 	~EuropeanBasket_MonteCarlo() {};
 	EuropeanBasket_MonteCarlo(size_t nbSimu, PayOffBasket* Payoff, RandomProcess* diffusion);
 	void Simulate(double start, double end, size_t steps);
-	double GetPrice();
+	double GetPrice(double& r, double& T);
 	double GetVariance();
 
 protected:
@@ -44,7 +45,7 @@ protected:
 	RandomProcess* m_diffusion;
 	double MC_price;
 	double MC_variance;
-	std::vector<double> simulated_price;
+	matrix simulated_price;
 
 
 };
