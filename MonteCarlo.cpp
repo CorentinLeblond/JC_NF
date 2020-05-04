@@ -107,6 +107,7 @@ EuropeanBasket_MonteCarlo_controlvariable::EuropeanBasket_MonteCarlo_controlvari
 void EuropeanBasket_MonteCarlo_controlvariable::Simulate(double start, double end, size_t steps)
 {
 	std::cout << "MC European Basket and CV" << std::endl;
+	matrix CVprice(m_Simulation, 1);
 
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
@@ -128,13 +129,17 @@ void EuropeanBasket_MonteCarlo_controlvariable::Simulate(double start, double en
 		//maturity_spot.Print();
 
 		simulated_price(s, 0) = Payoff->operator()(maturity_spot)- CPayoff->operator()(maturity_spot);
-		//std::cout << "baskt " << Payoff->operator()(maturity_spot) << std::endl;
-		//std::cout << "baskt CV " << CPayoff->operator()(maturity_spot) << std::endl;
-		//std::cout << "simu at " << s << " " << simulated_price(s, 0) << std::endl;
+		CVprice(s, 0) = CPayoff->operator()(maturity_spot);
+
+
+		//if (Payoff->operator()(maturity_spot) > CPayoff->operator()(maturity_spot)) 
+		//{std::cout << "simu " << s << "difference positive" << std::endl;}
+		
 
 	}
 
-	MC_price = simulated_price.mean();
+	
+	MC_price = simulated_price.mean() + CVprice.mean();
 	MC_variance = simulated_price.variance();
 	
 };
