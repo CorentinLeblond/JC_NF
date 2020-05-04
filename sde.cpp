@@ -34,6 +34,23 @@ SinglePath* RandomProcess::GetPath(int pos)
 	return Paths[pos];
 }
 
+matrix RandomProcess::GetAllPaths() {
+
+
+	std::vector<double> element;
+	std::vector<std::vector<double>> res;
+	for (size_t single = 0; single < Paths.size(); single++) {
+
+		element = Paths[single]->GetAllValues();
+		res.push_back(element);
+
+		}
+
+	matrix chemins(res);
+	return chemins;
+
+};
+
 ////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -147,6 +164,79 @@ void BSEuler2D::Simulate(double startTime,double endTime,size_t nbSteps)
 
 	// delete Path;
 		
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+BlackScholesND::BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+	matrix varcov)
+	:m_Gen(N_gen), V_spot(spot_vec), V_Rate(rate_vec), V_vol(Sigma_vec), m_corr_matrix(corr_matrix), m_varcov(varcov),
+	RandomProcess(m_Gen, V_spot.nb_rows())
+{};
+
+BSEulerND::BSEulerND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+	matrix varcov) :
+	BlackScholesND(N_gen, spot_vec, rate_vec, Sigma_vec, corr_matrix, varcov)
+{ };
+
+
+void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
+{
+	Paths.clear();
+	size_t assets = V_spot.nb_rows();
+	double last_spot = 0.;
+	double next_spot = 0.;
+	double dt = (endTime - startTime) / nbSteps;
+	Brownian.Resize(assets, nbSteps);
+	matrix mean_vector(assets, 1);
+
+	for (size_t i = 0; i < assets; ++i)
+	{
+		//create the mean_vector at each time step of mu*dt
+		mean_vector(i, 0) = V_Rate(i, 0) * dt;
+	}
+
+	for (size_t t = 0; t < nbSteps; ++t)
+	{
+		matrix X = GaussianVectorCholesky(m_Gen, mean_vector, V_vol, m_corr_matrix,
+			m_varcov).CorrelatedGaussianVector();
+
+		for (size_t i = 0; i < assets; ++i)
+		{
+			//create the matrix of all brownian motion 
+			Brownian(i, t) = X(i, 0);
+		}
+
+	}
+
+	Paths.resize(assets);
+
+
+	for (size_t i = 0; i < assets; ++i)
+	{
+		// SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
+		Paths[i] = new SinglePath(startTime, endTime, nbSteps);
+
+		//std::cout << i << std::endl;
+		
+		//std::cout << "initial spot " << last_spot << std::endl;
+		last_spot = V_spot(i, 0);
+		//std::cout << last_spot << std::endl;
+		next_spot = 0.;
+		Paths[i]->InsertValue(last_spot);
+		for (size_t t = 0; t < nbSteps; ++t)
+		{
+			//std::cout << last_spot << std::endl;
+			next_spot = last_spot * (1 + sqrt(dt)*Brownian(i, t));
+			Paths[i]->InsertValue(next_spot);
+			last_spot = next_spot;
+
+		}
+
+		//Paths.push_back(Path);
+	}
+
 };
 
 // void export_csv(std::string f_name) const
