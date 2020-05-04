@@ -194,7 +194,7 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 
 	matrix CovarMatrix = VarCovarMatrix(Sigma, Correl);
 
-	RandomProcess* path = new BSEulerND(ngen, S, Nu, Sigma, Correl,
+	RandomProcess* path = new BSEulerND(ngen, spot_m, Nu, Sigma, Correl,
 		CovarMatrix);
 
 	size_t N = 10000;
@@ -202,13 +202,37 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	EuropeanBasket_MonteCarlo MC(N, bsktcall, path);
 	MC.Simulate(startTime,endTime,nbsteps);
 	double priceMC = MC.GetPrice(rate, endTime);
-	std::cout << priceMC << std::endl;
 	//dynamics.Simulate(startTime, endTime, nbsteps);
 	//matrix chemin = dynamics.GetAllPaths();
 	//chemin.Print();
 
+	UniformGenerator* ugen2 = new EcuyerCombined();
+	RandomGenerator* ngen2 = new NormalBoxMuller(ugen2, 0., 1.);
 
+	RandomProcess* chemin = new BSEuler1D(ngen2, spot, rate, vol);
 
+	double K = 100;
+
+	PayOffCall* call = new PayOffCall(K);
+
+	EuropeanVanilla_MonteCarlo VMC(N, call, chemin);
+	VMC.Simulate(startTime, endTime, nbsteps);
+	double priceVMC = VMC.GetPrice(rate, endTime);
+	
+
+	UniformGenerator* ugen3 = new EcuyerCombined();
+	Normal* ngen3 = new NormalBoxMuller(ugen3, 0., 1.);
+
+	RandomProcess* path_cv = new BSEulerND(ngen3, spot_m, Nu, Sigma, Correl,
+		CovarMatrix);
+
+	EuropeanBasket_MonteCarlo_controlvariable CVMC(N, bsktcall, bsktcallCV, path_cv);
+	CVMC.Simulate(startTime, endTime, nbsteps);
+	double priceCVMC = CVMC.GetPrice(rate, endTime);
+
+	std::cout << "price Vanilla 1D MC " << priceVMC << std::endl;
+	std::cout << "price Vanilla CV MC " << priceCVMC << std::endl;
+	std::cout << "price Vanilla MC for Basket " << priceMC << std::endl;
 	// std::cout << "debut print vector" << std::endl;
 	// for(size_t i = 0; i< nbsteps;++i)
 	// {
@@ -256,6 +280,12 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	delete gtr;
 	//delete path1;
 	//delete path2;
+
+	delete path;
+	delete ugen;
+	delete ngen;
+	delete ugen2;
+	delete ngen2;
 
 	delete bsktcall;
 	delete bsktcallCV;

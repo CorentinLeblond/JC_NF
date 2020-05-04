@@ -61,9 +61,6 @@ public:
 	void Simulate(double start, double end, size_t steps);
 
 protected:
-	size_t m_Simulation;
-	PayOffBasket* Payoff;
 	PayOffBasket* CPayoff;
-	RandomProcess* m_diffusion;
 
 };

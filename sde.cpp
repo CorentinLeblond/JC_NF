@@ -37,21 +37,17 @@ SinglePath* RandomProcess::GetPath(int pos)
 matrix RandomProcess::GetAllPaths() {
 
 
-	std::vector<double> element = Paths[0]->GetAllValues();
-	matrix res(Paths.size(), element.size());
+	std::vector<double> element;
+	std::vector<std::vector<double>> res;
 	for (size_t single = 0; single < Paths.size(); single++) {
 
-		for (size_t i = 0; i < element.size(); i++) {
-
-			res(single, i) = element[i];
+		element = Paths[single]->GetAllValues();
+		res.push_back(element);
 
 		}
 
-		element = Paths[single]->GetAllValues();
-
-	}
-
-	return res;
+	matrix chemins(res);
+	return chemins;
 
 };
 
@@ -189,15 +185,14 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 {
 	Paths.clear();
 	size_t assets = V_spot.nb_rows();
+	double last_spot = 0.;
+	double next_spot = 0.;
 	double dt = (endTime - startTime) / nbSteps;
 	Brownian.Resize(assets, nbSteps);
 	matrix mean_vector(assets, 1);
-	matrix ones(assets, 1);
 
 	for (size_t i = 0; i < assets; ++i)
 	{
-		//create a vector full of one in order to apply a matrixwise 
-		ones(i, 0) = 1.;
 		//create the mean_vector at each time step of mu*dt
 		mean_vector(i, 0) = V_Rate(i, 0) * dt;
 	}
@@ -215,21 +210,31 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 
 	}
 
-	SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
+	Paths.resize(assets);
+
+
 	for (size_t i = 0; i < assets; ++i)
 	{
-		double last_spot = V_spot(i, 0);
-		double next_spot = 0.;
-		Path->InsertValue(last_spot);
+		// SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
+		Paths[i] = new SinglePath(startTime, endTime, nbSteps);
+
+		//std::cout << i << std::endl;
+		
+		//std::cout << "initial spot " << last_spot << std::endl;
+		last_spot = V_spot(i, 0);
+		//std::cout << last_spot << std::endl;
+		next_spot = 0.;
+		Paths[i]->InsertValue(last_spot);
 		for (size_t t = 0; t < nbSteps; ++t)
 		{
-			next_spot = last_spot * (1 + Brownian(i, t));
-			Path->InsertValue(next_spot);
+			//std::cout << last_spot << std::endl;
+			next_spot = last_spot * (1 + sqrt(dt)*Brownian(i, t));
+			Paths[i]->InsertValue(next_spot);
 			last_spot = next_spot;
 
 		}
 
-		Paths.push_back(Path);
+		//Paths.push_back(Path);
 	}
 
 };

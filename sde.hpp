@@ -45,7 +45,8 @@ class RandomProcess
 	protected:
 	
 		RandomGenerator* Generator;
-		std::vector<SinglePath*> Paths; //On évite de faire des copies avec le pointeur qui pointe vers le vrai objet
+		std::vector<SinglePath*> Paths; //On évite de faire des copies avec le pointeur qui 
+		//pointe vers le vrai objet
 		int dimension;
 		
 };
