@@ -156,6 +156,30 @@ matrix& matrix::operator*=(const matrix& rhs)
 	return *this;
 };
 
+matrix& matrix::operator*=(const double& val)
+{
+	//element wise multiplication
+	matrix tmp(m_nb_rows, m_nb_cols);
+	for (std::size_t r = 0; r < m_nb_rows; ++r)
+	{
+		for (std::size_t c = 0; c < m_nb_cols; ++c)
+		{
+
+			tmp.m_data[r][c] = m_data[r][c] * val;
+
+		}
+	}
+
+	m_data = tmp.m_data;
+
+	return *this;
+
+};
+
+
+
+
+
 void matrix::CSV(std::string filename)
 {
 	std::ofstream out;
@@ -306,16 +330,18 @@ double matrix::variance()
 	double _mean = 0.;
 	
 	_mean = mean();
+
+	//std::cout << "mean " << _mean << std::endl;
 	
 	double sum2 = 0.;
 	
 	for(size_t i = 0; i < m_nb_rows; ++i)
 	{
-		sum2 += m_data[i][0]*m_data[i][0];
+		sum2 += (m_data[i][0] - _mean)*(m_data[i][0] - _mean); //*m_data[i][0];
 	}
 	
 	sum2 /= (m_nb_rows-1);
-	sum2 -= _mean*_mean;
+	//sum2 -= _mean*_mean;
 	
 	return sum2 ;
 };

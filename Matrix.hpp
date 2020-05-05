@@ -23,6 +23,7 @@ class matrix
 			double& operator()(std::size_t i, std::size_t j);
 			matrix& operator+=(const matrix& rhs);
 			matrix& operator*=(const matrix& rhs);
+			matrix& operator*=(const double& val);
 			
 			void CSV(std::string  filename); //mettre "Diffusion.csv"
 			

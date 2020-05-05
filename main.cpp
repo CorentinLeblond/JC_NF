@@ -11,18 +11,18 @@ int main(int argc, char* argv[])
 
 	double startTime = 0.;
 	double endTime = 1.;
-	size_t nbsteps = 100;
+	size_t nbsteps = 252;
 	double dt = (endTime - startTime) / nbsteps;
 //for 1D
 	double spot = 100.;
 	double vol= 0.2;
-	double rate = 0.1;
+	double rate = 0.05;
 //for 2D
 	double spot1 = 100.;
 	double spot2 = 100.;
 	double vol1= 0.2;
-	double vol2= 0.35;
-	double rate1 = 0.01;	
+	double vol2= 0.2;
+	double rate1 = 0.00;	
 	double rate2 = 0.03;
 	double rho = -1.;
 	
@@ -30,15 +30,15 @@ int main(int argc, char* argv[])
 	RandomGenerator* gtr = new NormalBoxMuller(ptr,0.,1.);
 	
 //for N Dim (3 assets to start)
-std::vector<std::vector<double>> Spot_vector = {{120},{100},{80}};
+std::vector<std::vector<double>> Spot_vector = {{100},{120},{80}};
 
-std::vector<std::vector<double>> Sigma_vector = {{0.25},{0.15},{0.3}};
+std::vector<std::vector<double>> Sigma_vector = {{0.25},{0.20},{0.15}};
 
-std::vector<std::vector<double>> Mu_vector = {{0.05},{0.015},{0.005}};
+std::vector<std::vector<double>> Mu_vector = {{rate},{rate},{rate}};
 
 std::vector<std::vector<double>> Correl_mat = {{1,-0.2,0.4},
-											   {-0.2,1,0.2},
-											   {0.4,0.2,1}};
+											   {-0.2,1,0.4},
+											   {0.4,0.4,1}};
 											   
 std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 //////////////////////////////////////////////////////////////////////////////////////
@@ -190,12 +190,19 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	matrix spot_m(Spot_vector);
 	matrix Sigma(Sigma_vector);
 	matrix Nu(Mu_vector);
+	matrix Nu2(Mu_vector);
 	matrix Correl(Correl_mat);
+
+	Nu*= dt;
+
+	std::cout << " Nu after dt operator " << std::endl;
+	Nu.Print();
 
 	matrix CovarMatrix = VarCovarMatrix(Sigma, Correl);
 
-	RandomProcess* path = new BSEulerND(ngen, spot_m, Nu, Sigma, Correl,
-		CovarMatrix);
+	GaussianVectorCholesky* corrG = new GaussianVectorCholesky(ngen, Nu, Sigma, Correl, CovarMatrix);
+
+	RandomProcess* path = new BSEulerND(corrG,spot_m);
 
 	size_t N = 10000;
 
@@ -223,16 +230,34 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	UniformGenerator* ugen3 = new EcuyerCombined();
 	Normal* ngen3 = new NormalBoxMuller(ugen3, 0., 1.);
 
-	RandomProcess* path_cv = new BSEulerND(ngen3, spot_m, Nu, Sigma, Correl,
-		CovarMatrix);
+	GaussianVectorCholesky* corrGauss = new GaussianVectorCholesky(ngen3, Nu, Sigma, Correl, CovarMatrix);
+
+	RandomProcess* path_cv = new BSEulerND(corrGauss,spot_m);
 
 	EuropeanBasket_MonteCarlo_controlvariable CVMC(N, bsktcall, bsktcallCV, path_cv);
 	CVMC.Simulate(startTime, endTime, nbsteps);
 	double priceCVMC = CVMC.GetPrice(rate, endTime);
 
+	double varVMC = VMC.GetVariance();
+	double varMC = MC.GetVariance();
+	double varCVMC = CVMC.GetVariance();
+
 	std::cout << "price Vanilla 1D MC " << priceVMC << std::endl;
 	std::cout << "price Vanilla CV MC " << priceCVMC << std::endl;
 	std::cout << "price Vanilla MC for Basket " << priceMC << std::endl;
+
+	std::cout << "variance Vanilla 1D MC " << varVMC << std::endl;
+	std::cout << "variance Vanilla CV MC " << varCVMC << std::endl;
+	std::cout << "variance Vanilla MC for Basket " << varMC << std::endl;
+	
+	ClosedFormulaBasketCall* CFbaskt = new ClosedFormulaBasketCall(W, spot_m, CovarMatrix, K,
+		rate, endTime);
+
+	//std::vector<std::vector<double>> Spot_vector_maturity = { {130},{110},{91} };
+	//matrix endspot(Spot_vector_maturity);
+	double df = exp(-rate * endTime);
+	std::cout << "closed formula for the basket option" << CFbaskt->operator()(spot_m,df) << std::endl;
+	
 	// std::cout << "debut print vector" << std::endl;
 	// for(size_t i = 0; i< nbsteps;++i)
 	// {
@@ -278,6 +303,8 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	
 	delete ptr;
 	delete gtr;
+	delete corrG;
+	delete corrGauss;
 	//delete path1;
 	//delete path2;
 

@@ -169,15 +169,12 @@ void BSEuler2D::Simulate(double startTime,double endTime,size_t nbSteps)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BlackScholesND::BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
-	matrix varcov)
-	:m_Gen(N_gen), V_spot(spot_vec), V_Rate(rate_vec), V_vol(Sigma_vec), m_corr_matrix(corr_matrix), m_varcov(varcov),
-	RandomProcess(m_Gen, V_spot.nb_rows())
+BlackScholesND::BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec)
+	:m_gaussian(CorrelGaussian), V_spot(spot_vec)
 {};
 
-BSEulerND::BSEulerND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
-	matrix varcov) :
-	BlackScholesND(N_gen, spot_vec, rate_vec, Sigma_vec, corr_matrix, varcov)
+BSEulerND::BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec):
+	BlackScholesND(CorrelGaussian,spot_vec)
 { };
 
 
@@ -191,16 +188,15 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 	Brownian.Resize(assets, nbSteps);
 	matrix mean_vector(assets, 1);
 
-	for (size_t i = 0; i < assets; ++i)
-	{
+	//for (size_t i = 0; i < assets; ++i)
+	//{
 		//create the mean_vector at each time step of mu*dt
-		mean_vector(i, 0) = V_Rate(i, 0) * dt;
-	}
+		//mean_vector(i, 0) = V_Rate(i, 0) * dt;
+	//}
 
 	for (size_t t = 0; t < nbSteps; ++t)
 	{
-		matrix X = GaussianVectorCholesky(m_Gen, mean_vector, V_vol, m_corr_matrix,
-			m_varcov).CorrelatedGaussianVector();
+		matrix X = m_gaussian->CorrelatedGaussianVector();
 
 		for (size_t i = 0; i < assets; ++i)
 		{
@@ -211,7 +207,6 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 	}
 
 	Paths.resize(assets);
-
 
 	for (size_t i = 0; i < assets; ++i)
 	{

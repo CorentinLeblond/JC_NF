@@ -222,7 +222,7 @@ class GaussianVectorCholesky: public GaussianVector
 		~GaussianVectorCholesky(){};
 		
 		// double generate();
-		
+				
 		matrix CorrelatedGaussianVector();
 		
 	protected:
