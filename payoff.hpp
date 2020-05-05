@@ -76,3 +76,20 @@ class PayOffControlVarBasketCall : public PayOffBasket
 		virtual double operator() (matrix S,const double& df = 1);
 	  
 };
+
+class ClosedFormulaBasketCall : public PayOffBasket
+{
+public:
+
+	ClosedFormulaBasketCall(matrix inputWeights, matrix inputS, matrix inputVarCovar, const double& inputK, const double& inputrate, const double& inputtime);
+	~ClosedFormulaBasketCall() {};
+
+	// Virtual function is now over-ridden (not pure-virtual anymore)
+	double operator() (matrix S, const double& df = 1);
+private:
+
+	matrix VarCovar;
+	double rate;
+	double time;
+};
+double normalCDF(double x);

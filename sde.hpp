@@ -122,8 +122,9 @@ class BlackScholesND : public RandomProcess
 public:
 
 	BlackScholesND() {};
-	BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
-		matrix varcov);
+	//BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+	//	matrix varcov);
+	BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec);
 	~BlackScholesND() {};
 
 
@@ -132,12 +133,13 @@ public:
 protected:
 
 	matrix V_spot;
-	matrix V_Rate;
-	Normal* m_Gen;
-	matrix V_vol;
-	matrix m_corr_matrix;
-	matrix m_varcov;
+	//matrix V_Rate;
+	//Normal* m_Gen;
+	//matrix V_vol;
+	//matrix m_corr_matrix;
+	//matrix m_varcov;
 	matrix Brownian;
+	GaussianVectorCholesky* m_gaussian;
 
 };
 
@@ -154,8 +156,7 @@ class BSEulerND : public BlackScholesND
 {
 public:
 	BSEulerND() {};
-	BSEulerND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
-		matrix varcov);
+	BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec);
 	~BSEulerND() {};
 	void Simulate(double startTime, double EndTime, size_t nbSteps);
 

@@ -64,15 +64,21 @@ void EuropeanBasket_MonteCarlo::Simulate(double start, double end, size_t steps)
 		//std::cout << "simulation " << s << std::endl;
 		m_diffusion->Simulate(start, end, steps);
 		matrix paths = m_diffusion->GetAllPaths();
+		//std::cout << "path" << std::endl;
+		//paths.Print();
+		//std::cout << paths.nb_rows() << std::endl;
 		matrix maturity_spot(paths.nb_rows(), 1);
 
 		for (size_t i = 0; i < paths.nb_rows(); i++) 
 		{
-
+			//std::cout << paths(i, paths.nb_cols() - 1) << std::endl;
 			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
+			//std::cout << "index" << std::endl;
+			
 			//get the vector at maturity 
 		}
 
+		//maturity_spot.Print();
 		
 		simulated_price(s,0) = Payoff->operator()(maturity_spot);
 	}
@@ -111,7 +117,7 @@ void EuropeanBasket_MonteCarlo_controlvariable::Simulate(double start, double en
 
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
-		std::cout << "simulation " << s << std::endl;
+		//std::cout << "simulation " << s << std::endl;
 		m_diffusion->Simulate(start, end, steps);
 		matrix paths = m_diffusion->GetAllPaths();
 		//std::cout << "Path matrix is  " << s << std::endl;
