@@ -2,10 +2,11 @@
 #include "MonteCarlo.h"
 #include <iostream>
 #include <fstream>
+#include <chrono> 
 
 int main(int argc, char* argv[])
 {		
-
+using clock = std::chrono::steady_clock;
 /////////////////////////////////////////////////////////////////////////////////////
 //INPUT FROM USER
 
@@ -13,6 +14,7 @@ int main(int argc, char* argv[])
 	double endTime = 1.;
 	size_t nbsteps = 252;
 	double dt = (endTime - startTime) / nbsteps;
+/*
 //for 1D
 	double spot = 100.;
 	double vol= 0.2;
@@ -28,8 +30,9 @@ int main(int argc, char* argv[])
 	
 	UniformGenerator* ptr = new EcuyerCombined();	
 	RandomGenerator* gtr = new NormalBoxMuller(ptr,0.,1.);
-	
+*/	
 //for N Dim (3 assets to start)
+double rate = 0.05;
 std::vector<std::vector<double>> Spot_vector = {{100},{120},{80}};
 
 std::vector<std::vector<double>> Sigma_vector = {{0.25},{0.20},{0.15}};
@@ -66,76 +69,8 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	std::cout << "Payoff for the basket call is " << payofftest << std::endl;
 	std::cout << "Payoff for the basket call Control Variate is " << payofftest2 << std::endl;
 
-///////////////////////////////////////////////////////////////////////////////////////
-//TEST MATRIX CLASS	
-		//matrix y({{120},{100},{80}});
-		//double test_mean = y.mean();
-		//double test_variance = y.variance();
-		
-		//std::cout << "Mean is " << test_mean << std::endl;
-		//std::cout << "Variance is " << test_variance << std::endl;
-		// matrix y(3,3);
-		// y(0,0) = 4.;
-		// y(1,0)  = 12.;
-		// y(2,0) = -16.;
-		// y(0,1)  = 12.;		
-		// y(1,1) = 37;
-		// y(1,2)  = -43;
-		// y(2,0)  = -16.;		
-		// y(2,1) = -43;
-		// y(2,2)  = 98;		
-		
-		// std::cout << "y matrix" << std::endl;
-		// y.Print();
-		// matrix o = y.Cholesky();
-		// std::cout << "o matrix" << std::endl;
-		// o.Print();
-		
-		// matrix x(2,1);
-		// x(0,0) = 1.;
-		// x(1,0)  = 2.;
-		// x.Print();
-		// x.Resize(2,2);
-		
-		// x.Diagonalization();
-		// x.Print();
-		
-		// matrix m(2, 2);
-		// matrix r(2, 2);
-        // // std::cout << m.nb_rows() << std::endl;
-        // // std::cout << m.nb_cols() << std::endl;
-		
-		// m(0,0) = 1.;
-		// m(0,1)  = 2.;
-		// m(1,0)  = 3.;
-		// m(1,1)  = 4.;
-		// std::cout << "matrix m" << std::endl;
-		// m.Print();
-		// std::cout << "matrix r" << std::endl;
-		// r(0,0) = 1.;
-		// r(0,1)  = 2.;
-		// r(1,0)  = 3.;
-		// r(1,1)  = 4.;
-		// r.Print();
-		// std::cout << "matrix z" << std::endl;
-		// matrix z = m * r;
-		// z.Print();
-		
-		// std::cout << "matrix e" << std::endl;
-		// // matrix e = m * r;
-		// // e.Print();
-		// // m+=r;
-		// // m.Print();
-		
-		// // matrix g = m + r;
-		// // g.Print();
-		// std::cout << "matrix m" << std::endl;
-		// m*=r;
-		// m.Print();
-		// // m.Print();
-		
-		
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////		
+////////////////////////////////////////////////////////////////////////////////////////
+	
 //First thing we want to do is to test that our EcuyerCombined method really generates a uniform distribution (0,1)
 	
 	// double mean_unif = ptr -> mean(100000);
@@ -173,7 +108,7 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	// BSEuler1D dynamics = BSEuler1D(gtr, spot, rate, vol);
 	// dynamics.Simulate(startTime, endTime, nbsteps);
 	// SinglePath* path = dynamics.GetPath(0);
-	
+///////////////////////////////////////////////////////////////////////////////////////////////	
 //Test BS2D
 
 	//BSEuler2D dynamics = BSEuler2D(gtr, spot1,spot2, rate1,rate2, vol1,vol2,rho);
@@ -181,11 +116,8 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	//SinglePath* path1 = dynamics.GetPath(0);
 	//SinglePath* path2 = dynamics.GetPath(1);
 
-
+///////////////////////////////////////////////////////////////////////////////////////////////
 //Test BSND
-
-	UniformGenerator* ugen = new EcuyerCombined();
-	Normal* ngen = new NormalBoxMuller(ugen, 0., 1.);
 
 	matrix spot_m(Spot_vector);
 	matrix Sigma(Sigma_vector);
@@ -195,58 +127,65 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 
 	Nu*= dt;
 
-	std::cout << " Nu after dt operator " << std::endl;
-	Nu.Print();
+	// std::cout << " Nu after dt operator " << std::endl;
+	// Nu.Print();
 
 	matrix CovarMatrix = VarCovarMatrix(Sigma, Correl);
+	
+	UniformGenerator* ugen = new EcuyerCombined();
+	Normal* ngen = new NormalBoxMuller(ugen, 0., 1.);
+	GaussianVectorCholesky* corrG = new GaussianVectorCholesky(ngen, Sigma, Correl, CovarMatrix);
+	RandomProcess* path = new BSEulerND(corrG,spot_m,rate);
 
-	GaussianVectorCholesky* corrG = new GaussianVectorCholesky(ngen, Nu, Sigma, Correl, CovarMatrix);
-
-	RandomProcess* path = new BSEulerND(corrG,spot_m);
-
-	size_t N = 10000;
-
-	EuropeanBasket_MonteCarlo MC(N, bsktcall, path);
+	size_t N = 3;
+	
+	clock::time_point start = clock::now(); //We start the chrono at that point of the code
+	EuropeanBasket MC(N, bsktcall, path);
 	MC.Simulate(startTime,endTime,nbsteps);
+	clock::time_point end = clock::now(); //We take again the time once the entire simulation is done
+	clock::duration execution_time = end - start; //We compute the differentce and print it next line
+	//Format is in seconds (cast <std::ratio<1>) stands for seconds
+	std::cout << "exec time for vanilla Basket call: " << std::chrono::duration <double,std::ratio<1>> (execution_time).count() << std::endl;
+	//Les variables de temps sont déclarées, on peut les réutiliser plus loin dans le code comme n'importe quelle autre variable
+
 	double priceMC = MC.GetPrice(rate, endTime);
+	
 	//dynamics.Simulate(startTime, endTime, nbsteps);
 	//matrix chemin = dynamics.GetAllPaths();
 	//chemin.Print();
 
 	UniformGenerator* ugen2 = new EcuyerCombined();
 	RandomGenerator* ngen2 = new NormalBoxMuller(ugen2, 0., 1.);
-
-	RandomProcess* chemin = new BSEuler1D(ngen2, spot, rate, vol);
-
+	// RandomProcess* chemin = new BSEuler1D(ngen2, spot, rate, vol);
 	double K = 100;
+/*
+	
 
 	PayOffCall* call = new PayOffCall(K);
 
 	EuropeanVanilla_MonteCarlo VMC(N, call, chemin);
 	VMC.Simulate(startTime, endTime, nbsteps);
 	double priceVMC = VMC.GetPrice(rate, endTime);
-	
+*/	
 
 	UniformGenerator* ugen3 = new EcuyerCombined();
 	Normal* ngen3 = new NormalBoxMuller(ugen3, 0., 1.);
+	GaussianVectorCholesky* corrGauss = new GaussianVectorCholesky(ngen3, Sigma, Correl, CovarMatrix);
+	RandomProcess* path_cv = new BSEulerND(corrGauss,spot_m,rate);
 
-	GaussianVectorCholesky* corrGauss = new GaussianVectorCholesky(ngen3, Nu, Sigma, Correl, CovarMatrix);
-
-	RandomProcess* path_cv = new BSEulerND(corrGauss,spot_m);
-
-	EuropeanBasket_MonteCarlo_controlvariable CVMC(N, bsktcall, bsktcallCV, path_cv);
+	EuropeanBasket_controlvariable CVMC(N, bsktcall, bsktcallCV, path_cv);
 	CVMC.Simulate(startTime, endTime, nbsteps);
 	double priceCVMC = CVMC.GetPrice(rate, endTime);
 
-	double varVMC = VMC.GetVariance();
+	// double varVMC = VMC.GetVariance();
 	double varMC = MC.GetVariance();
 	double varCVMC = CVMC.GetVariance();
 
-	std::cout << "price Vanilla 1D MC " << priceVMC << std::endl;
+	// std::cout << "price Vanilla 1D MC " << priceVMC << std::endl;
 	std::cout << "price Vanilla CV MC " << priceCVMC << std::endl;
 	std::cout << "price Vanilla MC for Basket " << priceMC << std::endl;
 
-	std::cout << "variance Vanilla 1D MC " << varVMC << std::endl;
+	// std::cout << "variance Vanilla 1D MC " << varVMC << std::endl;
 	std::cout << "variance Vanilla CV MC " << varCVMC << std::endl;
 	std::cout << "variance Vanilla MC for Basket " << varMC << std::endl;
 	
@@ -290,19 +229,9 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	//matrix output2 = gvec->CorrelatedGaussianVector();
 	//std::cout << "Output2" <<std::endl;
 	//output2.Print();
-////////////////////////////////////////////////////////////////////////////////////////	
-//TEST CSV
 
-	// std::ofstream myFile;
-	// myFile.open("BlackScholes2D_3.csv");
-	
-	// for(int i = 0; i< nbsteps;++i)
-	// {
-		// myFile << i*dt << "," << path1->GetState(i*dt) << "," << path2->GetState(i*dt)<<std::endl;
-	// }
-	
-	delete ptr;
-	delete gtr;
+	// delete ptr;
+	// delete gtr;
 	delete corrG;
 	delete corrGauss;
 	//delete path1;

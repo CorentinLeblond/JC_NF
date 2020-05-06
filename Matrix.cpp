@@ -220,6 +220,36 @@ matrix operator*(matrix a, matrix b)
 	return tmp;
 };
 
+matrix operator*(matrix a, const double& val)
+{
+	
+	matrix tmp(a.nb_rows(),a.nb_cols());
+
+	for(std::size_t i = 0; i < a.nb_rows(); ++i)
+	{
+		for(std::size_t c = 0; c < a.nb_cols(); ++c)
+		{
+			tmp(i,c) = tmp(i,c)*val;
+		}
+	
+	}
+	return tmp;
+};
+matrix operator*( const double& val,matrix a)
+{
+	
+	matrix tmp(a.nb_rows(),a.nb_cols());
+
+	for(std::size_t i = 0; i < a.nb_rows(); ++i)
+	{
+		for(std::size_t c = 0; c < a.nb_cols(); ++c)
+		{
+			tmp(i,c) = tmp(i,c)*val;
+		}
+	
+	}
+	return tmp;
+};
 
 //////////////////////////////
 // Bon cet algo ne fonctionne pas je ne sais pas pourquoi, je dois en trouver un autre pour calculer le detrmiannt des matrices
@@ -283,28 +313,29 @@ bool isInvertible(matrix mat, int n)
                
 matrix VarCovarMatrix(matrix vol,matrix correl)
 {
-	std::cout << "Computing the varcovar matrix " <<std::endl;
+	// std::cout << "Computing the varcovar matrix " <<std::endl;
 	size_t Nb_asset = vol.nb_rows(); 
 	matrix diagvol = vol;
 	diagvol.Diagonalization();
-	std::cout << "DiagVol 1st step" <<std::endl;
-	diagvol.Print();
-	std::cout << diagvol.nb_rows()<<std::endl;
-	std::cout << diagvol.nb_cols()<<std::endl;
-	std::cout << "Matrice de correl" <<std::endl;
-	correl.Print();
-	std::cout << correl.nb_rows()<<std::endl;
-	std::cout << correl.nb_cols()<<std::endl;
+	
+	// std::cout << "DiagVol 1st step" <<std::endl;
+	// diagvol.Print();
+	// std::cout << diagvol.nb_rows()<<std::endl;
+	// std::cout << diagvol.nb_cols()<<std::endl;
+	// std::cout << "Matrice de correl" <<std::endl;
+	// correl.Print();
+	// std::cout << correl.nb_rows()<<std::endl;
+	// std::cout << correl.nb_cols()<<std::endl;
 	
 	matrix first_step = diagvol*correl;
-	std::cout << "Diagvol * correl matrix" <<std::endl;
-	first_step.Print();
-	std::cout << "Diagvol * correl matrix * diagvol" <<std::endl;
+	// std::cout << "Diagvol * correl matrix" <<std::endl;
+	// first_step.Print();
+	// std::cout << "Diagvol * correl matrix * diagvol" <<std::endl;
 	// diagvol.Print(); 
 	// first_step.Print();
 	// matrix second_step = first_step * diagvol;
 	first_step*=diagvol; //previous result * diag vol
-	first_step.Print();
+	// first_step.Print();
 	return first_step;
 };         
 

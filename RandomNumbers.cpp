@@ -187,19 +187,18 @@ double NormalBoxMuller::generate()
 };
 
 //Constructor, we use it to compute the covariance matrix thanks to inputs, it will be used in classes filles
-GaussianVector::GaussianVector(Normal* inputngnr,matrix inputMu, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar):
+GaussianVector::GaussianVector(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar):
 	Ngnr(inputngnr),
-	Nu(inputMu), //Vector of means for all assets
 	Sigma(inputSigma), //Vector of vol for all assets
 	Correl_matrix(inputcorrel), //Matrix containing all correlation coefficients between -1,1
 	CovarMatrix(inputvarcovar)
 	{
-		Nb_asset = inputMu.nb_rows(); 
+		Nb_asset = inputSigma.nb_rows(); 
 	};
 	
 	
-GaussianVectorCholesky::GaussianVectorCholesky(Normal* inputngnr,matrix inputMu, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar)
-	: GaussianVector(inputngnr, inputMu,  inputSigma,  inputcorrel, inputvarcovar)
+GaussianVectorCholesky::GaussianVectorCholesky(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar)
+	: GaussianVector(inputngnr, inputSigma,  inputcorrel, inputvarcovar)
 {
 	LowerCholesly = CovarMatrix.Cholesky();
 	//std::cout << "Lower cholesky" <<std::endl;
@@ -225,14 +224,14 @@ matrix GaussianVectorCholesky::CorrelatedGaussianVector()
 	matrix a = LowerCholesly*IndependentGaussian;
 	
 	//a.Print();
-	a += Nu;
+	// a += Nu;
 	// Our independend Gaussian vector is now a correlated gaussian vector that we return
 	
 	return a;
 };
 
-GaussianVectorDiag::GaussianVectorDiag(Normal* inputngnr,matrix inputMu, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar)
-	: GaussianVector(inputngnr, inputMu,  inputSigma,  inputcorrel, inputvarcovar)
+GaussianVectorDiag::GaussianVectorDiag(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar)
+	: GaussianVector(inputngnr, inputSigma,  inputcorrel, inputvarcovar)
 {
 ////////////////////////////////////////
 // C Version

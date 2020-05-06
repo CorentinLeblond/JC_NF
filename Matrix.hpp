@@ -36,6 +36,8 @@ class matrix
     };
 matrix operator+(const matrix& a, const matrix& b);
 matrix operator*(matrix a, matrix b);
+matrix operator*(matrix a, const double& val);
+matrix operator*(const double& val,matrix a);
 
 void getCofactor(matrix mat, matrix temp, int p, int q, int n);
 double determinantOfMatrix(matrix mat, int n) ;
