@@ -119,27 +119,27 @@ class BSEuler2D : public BlackScholes2D
 //////////////////////////////////////////////////////////////////////////////////////////
 class BlackScholesND : public RandomProcess
 {
-public:
+	public:
 
-	BlackScholesND() {};
-	//BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
-	//	matrix varcov);
-	BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec);
-	~BlackScholesND() {};
+		BlackScholesND() {};
+		//BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
+		//	matrix varcov);
+		BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate);
+		~BlackScholesND() {};
 
 
-	//cette classe créé l'objet BS qui créé à l'intérieur un chemin de brownien corrélés 
+		//cette classe créé l'objet BS qui créé à l'intérieur un chemin de brownien corrélés 
 
-protected:
+	protected:
 
-	matrix V_spot;
-	//matrix V_Rate;
-	//Normal* m_Gen;
-	//matrix V_vol;
-	//matrix m_corr_matrix;
-	//matrix m_varcov;
-	matrix Brownian;
-	GaussianVectorCholesky* m_gaussian;
+		matrix V_spot;
+		double rate;
+		//Normal* m_Gen;
+		//matrix V_vol;
+		//matrix m_corr_matrix;
+		//matrix m_varcov;
+		matrix Brownian;
+		GaussianVectorCholesky* m_gaussian;
 
 };
 
@@ -154,11 +154,28 @@ protected:
 class BSEulerND : public BlackScholesND
 
 {
-public:
-	BSEulerND() {};
-	BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec);
-	~BSEulerND() {};
-	void Simulate(double startTime, double EndTime, size_t nbSteps);
+	public:
+		BSEulerND() {};
+		BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate);
+		~BSEulerND() {};
+		void Simulate(double startTime, double EndTime, size_t nbSteps);
+
+};
+
+class BSEulerNDAntithetic : public BlackScholesND
+{
+	public:
+		BSEulerNDAntithetic() {};
+		BSEulerNDAntithetic(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate);
+		~BSEulerNDAntithetic() {};
+		void Simulate(double startTime, double EndTime, size_t nbSteps);
+		
+		matrix GetAllPathsAnti();
+	
+	private:
+	
+		std::vector<SinglePath*> PathsAntithetic;
+		matrix BrownianAntithetic;
 
 };
 

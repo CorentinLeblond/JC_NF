@@ -7,6 +7,7 @@
 #include <iostream>
 #include "Matrix.hpp"
 
+/*
 class PayOff 
 {
 	public:
@@ -37,7 +38,7 @@ class PayOffCall : public PayOff
 	  
 };
 ///////////////////////////////////////////////////////////////////////////////////////////
-
+*/
 class PayOffBasket
 {
 	public:

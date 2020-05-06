@@ -169,12 +169,14 @@ void BSEuler2D::Simulate(double startTime,double endTime,size_t nbSteps)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BlackScholesND::BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec)
-	:m_gaussian(CorrelGaussian), V_spot(spot_vec)
+BlackScholesND::BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate)
+	:m_gaussian(CorrelGaussian),
+	V_spot(spot_vec),
+	rate(inputrate)
 {};
 
-BSEulerND::BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec):
-	BlackScholesND(CorrelGaussian,spot_vec)
+BSEulerND::BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate):
+	BlackScholesND(CorrelGaussian,spot_vec,inputrate)
 { };
 
 
@@ -223,7 +225,7 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 		for (size_t t = 0; t < nbSteps; ++t)
 		{
 			//std::cout << last_spot << std::endl;
-			next_spot = last_spot * (1 + sqrt(dt)*Brownian(i, t));
+			next_spot = last_spot * (1+ rate*dt + sqrt(dt)*Brownian(i, t));
 			Paths[i]->InsertValue(next_spot);
 			last_spot = next_spot;
 
@@ -233,23 +235,102 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 	}
 
 };
+//ANTITHETIC TEST
+///////////////////////////////////////////////////////////////////////////////////////////////
 
-// void export_csv(std::string f_name) const
-// {
-        // double sMin = s_mesh.get_Smin();
-        // double dx = s_mesh.get_dx();
-        
-        // ofstream myFile;
-		// myFile.open(f_name);
-		
-		// f << "Spot,Price,Delta,Gamma" << "\n";
-		
-		// for(int i = 0; i<solution.size(); ++i)
-		// {
-				// f <<  exp(sMin+i*dx) << "," << solution[i] << "," << delta[i] << "," << gamma[i] << "\n";
-		// }
+BSEulerNDAntithetic::BSEulerNDAntithetic(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate):
+	BlackScholesND(CorrelGaussian,spot_vec,inputrate)
+{ 
+};
 
-		// std::cout << "Results exported to " << f_name << std::endl;
+
+void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSteps)
+{
+	Paths.clear();
+	PathsAntithetic.clear();
+	
+	size_t assets = V_spot.nb_rows();
+	double last_spot = 0.;
+	double last_spotAnti = 0.;
+	double next_spot = 0.;
+	double next_spotAnti = 0.;
+	double dt = (endTime - startTime) / nbSteps;
+	
+	Brownian.Resize(assets, nbSteps);
+	BrownianAntithetic.Resize(assets, nbSteps);
+	
+	// matrix mean_vector(assets, 1);
+
+	//for (size_t i = 0; i < assets; ++i)
+	//{
+		//create the mean_vector at each time step of mu*dt
+		//mean_vector(i, 0) = V_Rate(i, 0) * dt;
+	//}
+
+	for (size_t t = 0; t < nbSteps; ++t)
+	{
+		matrix X = m_gaussian->CorrelatedGaussianVector();
+		matrix XAntithetic = X*(-1);
 		
-        // f.close();
-// }
+		for (size_t i = 0; i < assets; ++i)
+		{
+			//create the matrix of all brownian motion 
+			Brownian(i, t) = X(i, 0);
+			BrownianAntithetic(i, t) = XAntithetic(i, 0);
+		}
+
+	}
+
+	Paths.resize(assets);
+	PathsAntithetic.resize(assets);
+	
+	for (size_t i = 0; i < assets; ++i)
+	{
+		// SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
+		Paths[i] = new SinglePath(startTime, endTime, nbSteps);
+		PathsAntithetic[i] = new SinglePath(startTime, endTime, nbSteps);
+		//std::cout << i << std::endl;
+		
+		//std::cout << "initial spot " << last_spot << std::endl;
+		last_spot = V_spot(i, 0);
+		last_spotAnti = V_spot(i, 0);
+		//std::cout << last_spot << std::endl;
+		next_spot = 0.;
+		next_spotAnti = 0.;
+		
+		Paths[i]->InsertValue(last_spot);
+		PathsAntithetic[i]->InsertValue(last_spotAnti);
+		
+		for (size_t t = 0; t < nbSteps; ++t)
+		{
+			//std::cout << last_spot << std::endl;
+			next_spot = last_spot * (1+ rate*dt+ sqrt(dt)*Brownian(i, t));
+			next_spotAnti = last_spotAnti * (1 + rate*dt + sqrt(dt)*BrownianAntithetic(i, t));
+			
+			Paths[i]->InsertValue(next_spot);
+			PathsAntithetic[i]->InsertValue(next_spotAnti);
+			
+			last_spot = next_spot;
+			last_spotAnti = next_spotAnti;
+		}
+
+		//Paths.push_back(Path);
+	}
+
+};
+matrix BSEulerNDAntithetic::GetAllPathsAnti() 
+{
+	std::vector<double> element;
+	std::vector<std::vector<double>> res;
+	for (size_t single = 0; single < PathsAntithetic.size(); single++) 
+	{
+
+		element = PathsAntithetic[single]->GetAllValues();
+		res.push_back(element);
+
+	}
+
+	matrix chemins(res);
+	return chemins;
+
+};

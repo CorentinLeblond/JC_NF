@@ -199,7 +199,7 @@ class GaussianVector
 {
 	public:
 	
-		GaussianVector(Normal* inputngnr,matrix inputMu,  matrix inputSigma, matrix inputcorrel,matrix varcovar);
+		GaussianVector(Normal* inputngnr,  matrix inputSigma, matrix inputcorrel,matrix varcovar);
 		~GaussianVector(){};
 		
 		virtual matrix CorrelatedGaussianVector() =0;
@@ -207,7 +207,6 @@ class GaussianVector
 	protected:
 		
 		size_t Nb_asset;
-		matrix Nu; //Vector of means for all assets
 		matrix Sigma; //Vector of vol for all assets
 		matrix Correl_matrix; //Matrix containing all correlation coefficients between -1,1
 		matrix CovarMatrix;
@@ -218,7 +217,7 @@ class GaussianVectorCholesky: public GaussianVector
 {
 	public:
 	
-		GaussianVectorCholesky(Normal* inputngnr,matrix inputMu,  matrix inputSigma, matrix inputcorrel,matrix varcovar);
+		GaussianVectorCholesky(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix varcovar);
 		~GaussianVectorCholesky(){};
 		
 		// double generate();
@@ -233,7 +232,7 @@ class GaussianVectorDiag: public GaussianVector
 {
 	public:
 	
-		GaussianVectorDiag(Normal* inputngnr,matrix inputMu,  matrix inputSigma, matrix inputcorrel,matrix varcovar);
+		GaussianVectorDiag(Normal* inputngnr,  matrix inputSigma, matrix inputcorrel,matrix varcovar);
 		~GaussianVectorDiag(){};
 		
 		// double generate();

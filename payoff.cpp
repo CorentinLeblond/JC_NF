@@ -1,6 +1,6 @@
 #include <iostream>
 #include "payoff.hpp"
-
+/*
 PayOffCall::PayOffCall(const double& K)
 {
 	m_K = K;
@@ -11,7 +11,7 @@ double PayOffCall::operator() (const double& S,const double& df) const
 {
 	return std::max(S-m_K*df, 0.0); // Call payoff
 };
-
+*/
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 PayOffBasketCall::PayOffBasketCall(matrix inputWeights, matrix inputS,const double& inputK)
@@ -79,8 +79,8 @@ double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 		Weights_T(i, 0) = Weights(0, i);
 		//std::cout << "value of log S " <<  log(S(i, 0)) << std::endl;
 	}
-	std::cout << "index val : " << indexvalue << std::endl;
-	std::cout << "Transposed matrix : " << std::endl;
+	// std::cout << "index val : " << indexvalue << std::endl;
+	// std::cout << "Transposed matrix : " << std::endl;
 	Weights_T.Print();
 	//Variance basket
 	Weights *= VarCovar;
@@ -88,21 +88,21 @@ double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 	// std::cout<<"variance : "<<std::endl;
 	// Weights.Print();
 	variance_basket = Weights(0, 0);
-	std::cout << "variance : " << variance_basket << std::endl;
+	// std::cout << "variance : " << variance_basket << std::endl;
 	//On peut commencer le pricing
 	//variance basket is sigma squared in the bs formula
 	double d1 = log(indexvalue / K);
-	std::cout << "d1 : " << d1 << std::endl;
+	// std::cout << "d1 : " << d1 << std::endl;
 	d1 += (rate + variance_basket / 2) * time;
-	std::cout << "d1 : " << d1 << std::endl;
+	// std::cout << "d1 : " << d1 << std::endl;
 	d1 /= sqrt(variance_basket * time);
-	std::cout << "d1 : " << d1 << std::endl;
+	// std::cout << "d1 : " << d1 << std::endl;
 	double d2 = d1 - sqrt(variance_basket * time);
-	std::cout << "d2 : " << d2 << std::endl;
+	// std::cout << "d2 : " << d2 << std::endl;
 	double N_d1 = normalCDF(d1);
 	double N_d2 = normalCDF(d2);
-	std::cout << "N_d1 : " << N_d1 << std::endl;
-	std::cout << "N_d2 : " << N_d2 << std::endl;
+	// std::cout << "N_d1 : " << N_d1 << std::endl;
+	// std::cout << "N_d2 : " << N_d2 << std::endl;
 	return (indexvalue * N_d1 - df * K * N_d2);
 };
 
