@@ -117,7 +117,6 @@ double VanDerCorput::generate()
 	n = current;
 	q = 0.;
 	bk = (double) 1/base;
-	
 	while(n>0)
 	{
 		q += (n % base)*bk;
@@ -140,7 +139,8 @@ double VanDerCorput::generate()
 //////////////////////////////////////////////////////////////////////
 const long double PI = 3.141592653589793238L;
 
-Normal::Normal(UniformGenerator* inputugnr,double inputMu, double inputSigma) : Mu(inputMu),ugnr(inputugnr)
+Normal::Normal(UniformGenerator* inputugnr,double inputMu, double inputSigma) 
+	: Mu(inputMu),ugnr(inputugnr)
 {
 	if(inputSigma < 0)
 		throw std::exception("The variance must be strictly positive for Normal distribution");
@@ -150,7 +150,9 @@ Normal::Normal(UniformGenerator* inputugnr,double inputMu, double inputSigma) : 
 Normal::~Normal()
 {}
 
-NormalBoxMuller::NormalBoxMuller(UniformGenerator* inputugnr,double inputMu, double inputSigma) : Normal(inputugnr,inputMu, inputSigma)
+NormalBoxMuller::NormalBoxMuller(UniformGenerator* inputugnr,double inputMu, double inputSigma) 
+	: 
+	Normal(inputugnr,inputMu, inputSigma)
 {
 	requireNewSimulation = true;
 }
@@ -161,6 +163,49 @@ double NormalBoxMuller::generate()
 	{
 		double gnr1 = ugnr -> generate();
 		double gnr2 = ugnr -> generate();
+		
+		// std::cout << "gnr1 " <<gnr1<<std::endl;
+		// std::cout << "gnr2 " <<gnr2<<std::endl;
+		
+		double R = sqrt(-2*log(gnr1));
+		double O = 2*PI*gnr2;
+		
+		X = R*cos(O);
+		Y = R*sin(O);
+		
+		X = X*Sigma + Mu;
+		Y = Y*Sigma + Mu;
+		
+		requireNewSimulation = false;
+		// std::cout << "X : " << X << std::endl;
+		
+		return X;
+		
+	}
+	else
+	{
+		//std::cout << "Y : " << Y << std::endl;
+		requireNewSimulation = true;
+		return Y;
+
+	}	
+};
+NormalBoxMullerQuasi::NormalBoxMullerQuasi(UniformGenerator* inputugnr,UniformGenerator* inputugnr2,double inputMu, double inputSigma) 
+	: 
+	NormalBoxMuller(inputugnr,inputMu, inputSigma),
+	ugnr2(inputugnr2)
+{
+	requireNewSimulation = true;
+}
+double NormalBoxMullerQuasi::generate()
+{
+	if(requireNewSimulation == true)
+	{
+		double gnr1 = ugnr -> generate();
+		double gnr2 = ugnr2 -> generate();
+		
+		// std::cout << "gnr1 " <<gnr1<<std::endl;
+		// std::cout << "gnr2 " <<gnr2<<std::endl;
 		
 		double R = sqrt(-2*log(gnr1));
 		double O = 2*PI*gnr2;

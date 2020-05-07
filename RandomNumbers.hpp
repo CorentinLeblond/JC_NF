@@ -174,6 +174,7 @@ class Normal : public ContinuousGenerator
 		double Mu;
 		double Sigma;
 		UniformGenerator* ugnr;
+		
 
 	public:
 		Normal(UniformGenerator* inputugnr,double inputMu, double inputSigma);
@@ -182,16 +183,24 @@ class Normal : public ContinuousGenerator
 
 class NormalBoxMuller : public Normal
 {
-	private:
+	protected:
 		bool requireNewSimulation;
 		double X;
 		double Y;
-
 	public:
 		NormalBoxMuller(UniformGenerator* inputugnr,double inputMu, double inputSigma);
+		~NormalBoxMuller(){};
 		double generate();
 };
-
+class NormalBoxMullerQuasi : public NormalBoxMuller
+{
+	private:
+		UniformGenerator* ugnr2;
+	public:
+		NormalBoxMullerQuasi(UniformGenerator* inputugnr,UniformGenerator* inputugnr2,double inputMu, double inputSigma);
+		~NormalBoxMullerQuasi(){};
+		double generate();
+};
 //On crée une classe mère "gaussian vector" pour permettre plusieurs techniques de décompositions via des classes filles
 //Elle stocke les variables utiles qui seront utilisées dans les classes filles
 //Deux potentielles classes filles pour deux types de décomposition (cholesly et l'autre méthode)
