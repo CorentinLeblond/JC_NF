@@ -15,9 +15,10 @@ class MonteCarlo
 		
 		double GetPrice(double& r, double& T);
 		double GetVariance();
+		void OptimalNbSimul(const double& errortolerated);
 	
 	protected:
-	
+		
 		size_t m_Simulation;
 		PayOffBasket* Payoff;
 		RandomProcess* m_diffusion;

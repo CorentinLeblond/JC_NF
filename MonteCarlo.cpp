@@ -13,7 +13,16 @@ double MonteCarlo::GetVariance()
 {
 	return MC_variance;
 };
-
+void MonteCarlo::OptimalNbSimul(const double& errortolerated)
+{
+	//The two-sided 99% quantile is:
+	double quantile = 2.57;
+	
+	//It returns the minimum number of simulations required to make the estimated price below the error tolerated with confidence level 99%
+	m_Simulation = (size_t) ((quantile*quantile*MC_variance)/(errortolerated*errortolerated)); // Ptetre changer le type de la méthode comme on veut un nombre de simulation
+	
+	//The process is tho run a first companion MC on a few simulations, then estimate the variance, then definie minimul number and run the MC over this computed number
+};
 //MonteCarlo European
 /////////////////////////////////////////////////////////
 MonteCarloEuropean::MonteCarloEuropean(size_t nbSimu, PayOffBasket* inputPayoff, RandomProcess* diffusion)
