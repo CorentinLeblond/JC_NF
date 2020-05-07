@@ -8,6 +8,10 @@ double MonteCarlo::GetPrice(double& r, double& T)
 {
 	return exp(-r * T) * MC_price;
 };
+size_t MonteCarlo::GetNbSimul()
+{
+	return m_Simulation;
+};
 
 double MonteCarlo::GetVariance()
 {
@@ -100,16 +104,19 @@ void EuropeanBasket::Simulate(double start, double end, size_t steps)
 
 };
 
-EuropeanBasket_controlvariable::EuropeanBasket_controlvariable(size_t nbSimu, PayOffBasket* inputPayoff, PayOffBasket* Payoff_control, RandomProcess* diffusion):
+EuropeanBasket_controlvariable::EuropeanBasket_controlvariable(size_t nbSimu, PayOffBasket* inputPayoff, PayOffBasket* Payoff_control,
+																RandomProcess* diffusion,double inputclosedPrice)
+	:
 	MonteCarloEuropean(nbSimu,inputPayoff,diffusion),
-	CPayoff(Payoff_control)
+	CPayoff(Payoff_control),
+	ExpPriceClsForm(inputclosedPrice)
 {
 };
 
 void EuropeanBasket_controlvariable::Simulate(double start, double end, size_t steps)
 {
 	std::cout << "MC European Basket and CV" << std::endl;
-	matrix CVprice(m_Simulation, 1);
+	// matrix CVprice(m_Simulation, 1);
 
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
@@ -130,18 +137,17 @@ void EuropeanBasket_controlvariable::Simulate(double start, double end, size_t s
 		//std::cout << "mat spot at " << s << std::endl;
 		//maturity_spot.Print();
 
-		simulated_price(s, 0) = Payoff->operator()(maturity_spot)- CPayoff->operator()(maturity_spot);
-		CVprice(s, 0) = CPayoff->operator()(maturity_spot);
+		simulated_price(s, 0) = Payoff->operator()(maturity_spot)- CPayoff->operator()(maturity_spot)+ExpPriceClsForm;
+		// CVprice(s, 0) = CPayoff->operator()(maturity_spot);
 
 
 		//if (Payoff->operator()(maturity_spot) > CPayoff->operator()(maturity_spot)) 
 		//{std::cout << "simu " << s << "difference positive" << std::endl;}
-		
-
 	}
 
 	
-	MC_price = simulated_price.mean() + CVprice.mean();
+	// MC_price = simulated_price.mean() + CVprice.mean();
+	MC_price = simulated_price.mean();
 	MC_variance = simulated_price.variance();
 	
 };
@@ -150,12 +156,18 @@ EuropeanBasket_Antithetic::EuropeanBasket_Antithetic(size_t nbSimu, PayOffBasket
 	MonteCarloEuropean(nbSimu,inputPayoff,diffusion),
 	x_diffusion(diffusion)
 {
+	simulated_price_Anti.Resize(m_Simulation/2,1);
+	average_price.Resize(m_Simulation/2,1);
 };
 
 void EuropeanBasket_Antithetic::Simulate(double start, double end, size_t steps)
 {
-	std::cout << "MC European Basket"<< std::endl;
-
+	std::cout << "MC European Basket and Anti"<< std::endl;
+	
+	simulated_price.Resize(m_Simulation/2,1);
+	// simulated_price_Anti.Resize(m_Simulation/2,1);
+	size_t k = 0;
+	
 	for (size_t s = 0; s < m_Simulation; s++) 
 	{
 		//std::cout << "simulation " << s << std::endl;
@@ -184,11 +196,81 @@ void EuropeanBasket_Antithetic::Simulate(double start, double end, size_t steps)
 		}
 
 		//maturity_spot.Print();
-		
-		simulated_price(s,0) = Payoff->operator()(maturity_spot);
+		if(s % 2 ==0)
+		{
+			simulated_price(k,0) = Payoff->operator()(maturity_spot);
+		}
+		else
+		{
+			simulated_price_Anti(k,0) = Payoff->operator()(maturity_spot);
+			average_price(k,0) = 0.5*(simulated_price_Anti(k,0) + simulated_price(k,0));
+		}		
+		k+=1;
 	}
 
-	MC_price = simulated_price.mean();
-	MC_variance = simulated_price.variance();
+	MC_price = average_price.mean();
+	MC_variance = average_price.variance();
 
 };
+
+EuropeanBasket_Antithetic_CV::EuropeanBasket_Antithetic_CV(size_t nbSimu, PayOffBasket* Payoff,PayOffBasket* Payoff_control,
+														BSEulerNDAntithetic* diffusion,double inputclosedPrice)
+	:
+	EuropeanBasket_Antithetic(nbSimu,Payoff,diffusion),
+	CPayoff(Payoff_control),
+	ExpPriceClsForm(inputclosedPrice)
+{
+};
+//////////////////////////////////////////////////////////////////////////////////////////////////
+void EuropeanBasket_Antithetic_CV::Simulate(double start, double end, size_t steps)
+{
+	// std::cout << "MC European Basket and CV" << std::endl;
+	std::cout << "MC European Basket and Anti with CV"<< std::endl;
+	simulated_price.Resize(m_Simulation/2,1);
+	// simulated_price_Anti.Resize(m_Simulation/2,1);
+	size_t k = 0;
+	
+	for (size_t s = 0; s < m_Simulation; s++) 
+	{
+		//std::cout << "simulation " << s << std::endl;
+		if(s % 2 ==0)
+		{
+			x_diffusion->Simulate(start, end, steps);
+			paths = x_diffusion->GetAllPaths();
+		}
+		else
+		{
+			paths = x_diffusion->GetAllPathsAnti();
+		}
+				
+		//std::cout << "path" << std::endl;
+		//paths.Print();
+		//std::cout << paths.nb_rows() << std::endl;
+		matrix maturity_spot(paths.nb_rows(), 1);
+
+		for (size_t i = 0; i < paths.nb_rows(); i++) 
+		{
+			//std::cout << paths(i, paths.nb_cols() - 1) << std::endl;
+			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
+			//std::cout << "index" << std::endl;
+			
+			//get the vector at maturity 
+		}
+
+		//maturity_spot.Print();
+		if(s % 2 ==0)
+		{
+			simulated_price(k,0) = Payoff->operator()(maturity_spot)-CPayoff->operator()(maturity_spot)+ExpPriceClsForm;;
+		}
+		else
+		{
+			simulated_price_Anti(k,0) = Payoff->operator()(maturity_spot)- CPayoff->operator()(maturity_spot)+ExpPriceClsForm;;
+			average_price(k,0) = 0.5*(simulated_price_Anti(k,0) + simulated_price(k,0));
+		}		
+		k+=1;
+	}
+
+	MC_price = average_price.mean();
+	MC_variance = average_price.variance();
+	
+};	

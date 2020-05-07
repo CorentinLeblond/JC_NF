@@ -16,6 +16,7 @@ class MonteCarlo
 		double GetPrice(double& r, double& T);
 		double GetVariance();
 		void OptimalNbSimul(const double& errortolerated);
+		size_t GetNbSimul();
 	
 	protected:
 		
@@ -63,11 +64,12 @@ class EuropeanBasket_controlvariable : public MonteCarloEuropean
 	public:
 
 		~EuropeanBasket_controlvariable() {};
-		EuropeanBasket_controlvariable(size_t nbSimu, PayOffBasket* Payoff, PayOffBasket* Payoff_control, RandomProcess* diffusion);
+		EuropeanBasket_controlvariable(size_t nbSimu, PayOffBasket* Payoff, PayOffBasket* Payoff_control, RandomProcess* diffusion,double inputclosedPrice);
 		void Simulate(double start, double end, size_t steps);
 
 	protected:
 		PayOffBasket* CPayoff;
+		double ExpPriceClsForm;
 
 };
 
@@ -83,5 +85,21 @@ class EuropeanBasket_Antithetic: public MonteCarloEuropean
 	protected:
 		BSEulerNDAntithetic* x_diffusion;
 		matrix paths;
+		matrix simulated_price_Anti;
+		matrix average_price;
+	
+};
+class EuropeanBasket_Antithetic_CV: public EuropeanBasket_Antithetic
+{
+	public:
+
+		~EuropeanBasket_Antithetic_CV() {};
+		EuropeanBasket_Antithetic_CV(size_t nbSimu, PayOffBasket* Payoff,PayOffBasket* Payoff_control, BSEulerNDAntithetic* diffusion,double inputclosedPrice);
+		void Simulate(double start, double end, size_t steps);
+
+	protected:
+	
+		PayOffBasket* CPayoff;
+		double ExpPriceClsForm;
 	
 };
