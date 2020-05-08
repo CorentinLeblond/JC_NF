@@ -1,5 +1,8 @@
 #include "RandomNumbers.hpp"
 #include <math.h>
+
+#define MAXBIT 30
+#define MAXDIM 6
 //////////////////////////////////////////////////////////////////////////////////////////////
 double RandomGenerator::mean(myLong nbSim)
 {
@@ -131,7 +134,108 @@ double VanDerCorput::generate()
 	current+=1;
 	return q;
 };
+////////////////////////////////////////////////////////////////////////////////
+Sobol::Sobol(myLong inputseed): QuasiGenerator(inputseed)
+{
+	n = -1;
+	sequence(n);
+	n = 2;
+	std::cout<<"Sobol Constructor"<<std::endl;
+	requireNewSimulation = true;
+	
+};
 
+double Sobol::generate()
+{
+	if(requireNewSimulation == true) 
+	{
+		// std::cout<<"Sobol Sequence generation"<<std::endl;
+		sequence(n);
+		// std::cout<<"Sobol Sequence generation Done"<<std::endl;
+		requireNewSimulation = false;
+		// std::cout<<"0D elemente: "<<x[0]<<std::endl;
+		// std::cout<<"1D elemente: "<<x[1]<<std::endl;
+		// std::cout<<"size: "<<x.size()<<std::endl;
+		return x[1];
+	}
+	else
+	{
+		requireNewSimulation = true;
+		return x[2];
+		
+	}
+};
+
+void Sobol::sequence(int inputn)
+{
+	/*
+	When n is negative, internally initializes a set of MAXBIT direction numbers for each of MAXDIM
+	different Sobol’ sequences. When n is positive (but ≤MAXDIM), returns as the vector x[1..n]
+	the next values from n of these sequences. (n must not be changed between initializations.)
+	*/
+// x.resize(n)
+	int j,k,l;
+	unsigned long i,im,ipp;
+	static float fac;
+	static unsigned long in,ix[MAXDIM+1],*iu[MAXBIT+1];
+	static unsigned long mdeg[MAXDIM+1]={0,1,2,3,3,4,4};
+	static unsigned long ip[MAXDIM+1]={0,0,1,1,2,1,4};
+	static unsigned long iv[MAXDIM*MAXBIT+1]={
+	0,1,1,1,1,1,1,3,1,3,3,1,1,5,7,7,3,3,5,15,11,5,15,13,9};
+	if (n < 0) 
+	{
+		for (k=1;k<=MAXDIM;k++) ix[k]=0;
+		in=0;
+		if (iv[1] != 1) return;
+		fac=1.0/(1L << MAXBIT);
+		for (j=1,k=0;j<=MAXBIT;j++,k+=MAXDIM) iu[j] = &iv[k];
+		// To allowboth 1D and 2D addressing.
+		for (k=1;k<=MAXDIM;k++) 
+		{
+			for (j=1;j<=mdeg[k];j++) iu[j][k] <<= (MAXBIT-j);
+			for (j=mdeg[k]+1;j<=MAXBIT;j++) 
+			{
+				ipp=ip[k];
+				i=iu[j-mdeg[k]][k];
+				i ^= (i >> mdeg[k]);
+				for (l=mdeg[k]-1;l>=1;l--) 
+				{
+				if (ipp & 1) i ^= iu[j-l][k];
+				ipp >>= 1;
+				}
+				iu[j][k]=i;
+			}
+		}
+	}
+	else 
+	{
+		x.resize(n+1);
+		im=in++;
+		for (j=1;j<=MAXBIT;j++) 
+		{
+			if (!(im & 1)) break;
+			im >>= 1;
+		}
+		if (j > MAXBIT) std::cout<<("MAXBIT too small in sobseq")<<std::endl;
+		im=(j-1)*MAXDIM;
+		for (k=1;k<=IMIN(n,MAXDIM);k++)
+		{
+			ix[k] ^= iv[im+k];
+			x[k]=ix[k]*fac;
+		}
+	}
+};
+// int Sobol::GetN()
+// {
+	// return n;
+// };
+int IMIN(int a,int b)
+{
+	if(a <= b) return a;
+	
+	if(a > b) return b;
+};
+////////////////////////////////////////////////////////////////////////////////
 // Kakutani::Kakutani(myLong inputseed):
 	// QuasiGenerator(inputseed)
 // {
@@ -164,6 +268,7 @@ double NormalBoxMuller::generate()
 		double gnr1 = ugnr -> generate();
 		double gnr2 = ugnr -> generate();
 		
+		
 		// std::cout << "gnr1 " <<gnr1<<std::endl;
 		// std::cout << "gnr2 " <<gnr2<<std::endl;
 		
@@ -190,14 +295,14 @@ double NormalBoxMuller::generate()
 
 	}	
 };
-NormalBoxMullerQuasi::NormalBoxMullerQuasi(UniformGenerator* inputugnr,UniformGenerator* inputugnr2,double inputMu, double inputSigma) 
+NormalBoxMullerVDC::NormalBoxMullerVDC(UniformGenerator* inputugnr,UniformGenerator* inputugnr2,double inputMu, double inputSigma) 
 	: 
 	NormalBoxMuller(inputugnr,inputMu, inputSigma),
 	ugnr2(inputugnr2)
 {
 	requireNewSimulation = true;
 }
-double NormalBoxMullerQuasi::generate()
+double NormalBoxMullerVDC::generate()
 {
 	if(requireNewSimulation == true)
 	{
@@ -231,6 +336,7 @@ double NormalBoxMullerQuasi::generate()
 	}	
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Constructor, we use it to compute the covariance matrix thanks to inputs, it will be used in classes filles
 GaussianVector::GaussianVector(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar):
 	Ngnr(inputngnr),
