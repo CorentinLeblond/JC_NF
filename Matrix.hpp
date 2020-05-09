@@ -14,8 +14,10 @@ class matrix
 			
 			void Resize(std::size_t nb_rows, std::size_t nb_cols);
 			void Diagonalization();
+			void addrows(std::vector<std::vector<double>>& data);
 			matrix Cholesky();
 			void Print();
+			matrix area(size_t end_r, size_t end_c, std::vector<size_t> opt_start = {0,0});
 			
 			double mean();
 			double variance();
@@ -34,14 +36,21 @@ class matrix
 			size_t m_nb_cols;
 			std::vector<std::vector<double>> m_data;
     };
+
+
 matrix operator+(const matrix& a, const matrix& b);
 matrix operator*(matrix a, matrix b);
 matrix operator*(matrix a, const double& val);
 matrix operator*(const double& val,matrix a);
 
-void getCofactor(matrix mat, matrix temp, int p, int q, int n);
+matrix getCofactor(matrix mat, int p, int q, int n);
 double determinantOfMatrix(matrix mat, int n) ;
-bool isInvertible(matrix mat, int n);
+matrix Inverse(matrix mat, int n);
+matrix adjoint(matrix A);
+matrix transpose(matrix A);
+matrix Inverse_Cholesky(matrix mat);
+void appendrow(matrix mat, matrix row);
+void appendcol(matrix mat, matrix col);
 
 
 matrix VarCovarMatrix(matrix vol,matrix correl);

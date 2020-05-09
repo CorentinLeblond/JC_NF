@@ -8,7 +8,7 @@ public:
 
 	basis_functions() {};
 	~basis_functions() {};
-	basis_functions(int order) {};
+	basis_functions(int order);
 	virtual double operator()(double& value) = 0;
 	virtual matrix operator()(matrix& InputMat) = 0;
 
@@ -24,7 +24,7 @@ public:
 
 	Poly_Laguerre() {};
 	~Poly_Laguerre() {};
-	Poly_Laguerre(int order) {};
+	Poly_Laguerre(int order);
 	int factorial(int n);
 	double operator()(double& value);
 	matrix operator()(matrix& InputMat);

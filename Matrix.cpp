@@ -176,7 +176,102 @@ matrix& matrix::operator*=(const double& val)
 
 };
 
+void matrix::addrows(std::vector<std::vector<double>>& data) 
 
+{
+	size_t init_size = m_data.size();
+	//std::cout << init_size << std::endl;
+	if ((m_nb_cols != data[0].size()) && (m_nb_cols != 0))
+	{
+		std::cout << "Can't add a row which don't fit the appropriate number of columns" << std::endl;
+		return;
+	}
+	else
+	{
+
+		if (init_size == 0)
+		{
+				
+				m_data.resize(data.size());
+				//std::cout << m_data.size() << std::endl;
+				m_data[0].resize(data[0].size(), 0.);
+				//std::cout << m_data[0].size() << std::endl;
+				m_data.push_back(data[0]);
+				//std::cout << m_data.size() << std::endl;
+				m_data.erase(m_data.begin());
+				std::cout << m_data[0][0] << std::endl;
+
+				if (data.size() != 1) 
+				{
+					for (size_t r = 1; r < data.size(); r++)
+					{
+
+						m_data.push_back(data[r]);
+
+					}
+				}
+
+			}
+			else
+			{
+				for (size_t r = 0; r < data.size(); r++)
+				{
+				
+				m_data.push_back(data[r]);
+
+				}
+			};
+			
+
+
+			//m_data[r].resize(data[0].size(), 0.);
+
+			//for (size_t c = 0; c < data[0].size(); c++)
+			//{
+			//	//std::cout << init_size << std::endl;
+			//	if (init_size == 0)
+			//	{
+			//		std::cout << "c" << std::endl;
+			//		m_data[r][c] = data[r][c];
+
+			//	}
+			//	else
+			//	{
+			//		//std::cout << "else" << std::endl;
+			//		m_data[r + init_size][c] = data[r][c];
+			//	};
+			//
+			//}
+	
+	}
+};
+
+matrix matrix::area(size_t end_r, size_t end_c, std::vector<size_t> opt_start)
+{
+	size_t row = end_c-opt_start[0] + 1;
+	size_t col = end_r - opt_start[1] + 1;
+	matrix res(row, col);
+
+	size_t new_r = 0;
+	size_t new_c = 0;
+
+	for (size_t r = opt_start[0]; r < end_r; r++) 
+	{
+
+		for (size_t c = opt_start[1]; c < end_c; c++) {
+		
+				
+			res(new_r, new_c) = m_data[r][c];
+			new_c++;
+		
+		}
+	
+		new_r++;
+	}
+
+	return res;
+
+};
 
 
 
@@ -251,15 +346,17 @@ matrix operator*( const double& val,matrix a)
 	return tmp;
 };
 
+
+
 //////////////////////////////
-// Bon cet algo ne fonctionne pas je ne sais pas pourquoi, je dois en trouver un autre pour calculer le detrmiannt des matrices
-void getCofactor(matrix mat, matrix temp, int p, int q, int n) 
+matrix getCofactor(matrix mat, int p, int q, int n) 
 { 
+	matrix temp(mat.nb_rows() - 1, mat.nb_cols() - 1);
     int i = 0, j = 0; 
   
     // Looping for each element of the matrix 
-    for (int row = 0; row < n; row++) { 
-        for (int col = 0; col < n; col++) { 
+	for (int row = 0; row < mat.nb_rows(); row++) {
+        for (int col = 0; col < mat.nb_cols(); col++) {
             // Copying into temporary matrix only those element 
             // which are not in given row and column 
             if (row != p && col != q) { 
@@ -274,41 +371,104 @@ void getCofactor(matrix mat, matrix temp, int p, int q, int n)
             } 
         } 
     } 
+
+	//std::cout << "cofactor matrix is " << std::endl;
+
+	//temp.Print();
+
+	return temp;
 } 
-  
-/* Recursive function for finding determinant of matrix. 
-n is current dimension of mat[][]. */
+
 double determinantOfMatrix(matrix mat, int n) 
 { 
     double D = 0.; // Initialize result 
   
     // Base case : if matrix contains single element 
-    if (n == 1) 
-        return mat(0,0); 
-  
-    matrix temp(mat.nb_rows(),mat.nb_rows()); // To store cofactors 
-  
-    double sign = 1.; // To store sign multiplier 
-  
-    // Iterate for each element of first row 
-    for (int f = 0; f < n; f++) { 
-        // Getting Cofactor of mat[0][f] 
-        getCofactor(mat, temp, 0, f, n); 
-        D += sign * mat(0,f) * determinantOfMatrix(temp, n - 1); 
-  
-        // terms are to be added with alternate sign 
-        sign = -sign; 
-    } 
-	std::cout << "Determinant equals; " << D << std::endl;
-    return D; 
+	if (n == 1) {
+		D =  mat(0, 0);
+		//std::cout << "mat 0 0 = " << mat(0, 0) << std::endl;
+	}
+	else {
+
+		matrix mt; // To store cofactors 
+
+		double sign = 1.; // To store sign multiplier 
+
+		// Iterate for each element of first row 
+		for (int f = 0; f < n; f++) {
+			mt = getCofactor(mat, 0, f, n);
+			//std::cout << "temp matrix is in determinant " << std::endl;
+			//mt.Print();
+			D += sign * mat(0, f) * determinantOfMatrix(mt, n - 1);
+
+			// terms are to be added with alternate sign 
+			sign = -sign;
+		}
+		//std::cout << "Determinant equals; " << D << std::endl;
+	}
+	return D;
+	
 } 
+
+matrix adjoint(matrix A)
+{
+	matrix adjacent(A.nb_rows(), A.nb_cols());
+	if ((A.nb_cols() == 1)&&(A.nb_rows() == 1))
+	{
+		adjacent(0,0) = 1;
+		//return adjacent;
+	}
+
+	// temp is used to store cofactors of A[][] 
+	double sign = 1.;
+	matrix tmp;
+	//tmp.Resize(A.nb_rows(),A.nb_cols());
+
+	for (int i = 0; i < A.nb_rows(); i++)
+	{
+		for (int j = 0; j < A.nb_cols(); j++)
+		{
+			// Get cofactor of A[i][j] 
+			tmp = getCofactor(A, i, j, adjacent.nb_cols());
+
+			// sign of adj[j][i] positive if sum of row 
+			// and column indexes is even. 
+			sign = ((i + j) % 2 == 0) ? 1 : -1;
+
+			// Interchanging rows and columns to get the 
+			// transpose of the cofactor matrix 
+			adjacent(j,i) = (sign) * (determinantOfMatrix(tmp, A.nb_cols() - 1));
+		}
+	}
+
+	return adjacent;
+}
+
   
-bool isInvertible(matrix mat, int n) 
+matrix Inverse(matrix mat, int n) 
 { 
-    if (determinantOfMatrix(mat, n) != 0) 
-        return true; 
-    else
-        return false; 
+	double det = determinantOfMatrix(mat,n);
+	matrix inverse;
+	inverse.Resize(mat.nb_cols(), mat.nb_rows());
+	if (det == 0)
+	{
+		std::cout << "Singular matrix, can't find its inverse" << std::endl;;
+		return inverse;
+	}
+	else 
+	{
+		// Find adjoint 
+		matrix adj;
+		//adj.Resize(mat.nb_rows(), mat.nb_cols());
+		adj = adjoint(mat);
+		//adj.Print();
+		// Find Inverse using formula "inverse(A) = adj(A)/det(A)" 
+		for (int i = 0; i < mat.nb_rows(); i++)
+			for (int j = 0; j < mat.nb_cols(); j++)
+				inverse(i, j) = adj(i, j) / det;
+
+		return inverse;
+	}
 } 
                
 matrix VarCovarMatrix(matrix vol,matrix correl)
@@ -376,3 +536,92 @@ double matrix::variance()
 	
 	return sum2 ;
 };
+
+matrix transpose(matrix A) 
+{
+	matrix A_t(A.nb_cols(), A.nb_rows());
+
+	for (size_t col = 0; col < A.nb_cols(); col++) 
+	{
+	
+		for (size_t row = 0; row < A.nb_rows(); row++)
+		{
+
+			A_t(col, row) = A(row, col);
+
+		};
+
+	}
+
+	return A_t;
+};
+
+
+matrix Inverse_Cholesky(matrix mat) 
+{
+	matrix L = mat.Cholesky();
+	matrix L_inv = Inverse(L, L.nb_rows());
+	matrix L_inv_transpose = transpose(L_inv);
+
+	return L_inv_transpose * L_inv;
+};
+
+void appendrow(matrix mat, matrix row) {
+
+
+	if ((row.nb_cols() != mat.nb_cols())&&(mat.nb_cols() != 0))
+	{ 
+		std::cout << "Can't add a row which don't fit the appropriate number of columns" << std::endl;
+		return;
+	}
+	else {
+		matrix temp(mat.nb_rows() + 1, row.nb_cols());
+		//std::cout << "row " << temp.nb_rows() << std::endl;
+		//std::cout << "col " << temp.nb_cols() << std::endl;
+		//temp.Resize(mat.nb_rows() + 1, row.nb_cols());
+		size_t newrow = temp.nb_rows()-1;
+		for (size_t col = 0; col < row.nb_cols(); col++)
+		{
+			//std::cout << "IN the loop" << std::endl;
+			temp(newrow, col) = row(0, col);
+			//std::cout << "value of temp "<< temp(newrow, col) << std::endl;
+		}
+
+		temp.Print();
+		//std::vector<std::vector<double>> temp_data = temp.GetMatrix();
+		//mat.Resize(temp.nb_rows(), temp.nb_cols());
+		//std::cout << "row " << mat.nb_rows() << std::endl;
+		//std::cout << "col " << mat.nb_cols() << std::endl;
+		mat = temp;
+
+	}
+
+};
+
+void appendcol(matrix mat, matrix col) {
+
+
+	if ((col.nb_rows() != mat.nb_rows())&&(mat.nb_rows()!=0))
+	{
+		std::cout << "Can't add a column which don't fit the appropriate number of rows" << std::endl;
+		return;
+	}
+	else {
+		//matrix temp = mat;
+		matrix temp(col.nb_rows() + 1, mat.nb_cols());
+		size_t newcol = temp.nb_cols() - 1;
+
+		for (size_t rows = 0; rows < col.nb_rows(); rows++)
+		{
+
+			temp(rows, newcol) = col(rows, 0);
+		}
+
+		mat.Resize(temp.nb_rows(), temp.nb_cols());
+		mat = temp;
+
+		//return temp;
+	}
+
+};
+

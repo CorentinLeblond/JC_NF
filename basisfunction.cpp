@@ -11,19 +11,17 @@ Poly_Laguerre::Poly_Laguerre(int order) :
 
 double Poly_Laguerre::operator() (double& value) 
 {
-	double Ln = 1.;
-	double product = 1.;
-	for (int k = 1; k < base_order; k++) 
+	double Ln = 0.;
+	for (int k = 0; k < base_order+1; k++) 
 	
 	{
-		product *= base_order - k + 1;
 		double ck = factorial(base_order) / (factorial(k) * factorial(base_order - k));
-		Ln += std::pow(-1., k) * ck * product * std::pow(value, k);
+		Ln += std::pow(-1.,k) * ck * std::pow(value, k)/ factorial(k);
 	
 		
 	};
 
-	Ln /= factorial(base_order);
+	//Ln /= factorial(base_order);
 
 	return Ln;
 };
@@ -38,7 +36,15 @@ int Poly_Laguerre::factorial(int n)
 matrix Poly_Laguerre::operator() (matrix& InputMat) 
 {
 
+	matrix Res(InputMat.nb_rows(), 1);
 
+	
+		for (size_t r = 0; r < InputMat.nb_rows(); r++)
+		{
+			Res(r, 0) = operator()(InputMat(r, 0)); //
 
+		}
+	
+		return Res;
 
 };

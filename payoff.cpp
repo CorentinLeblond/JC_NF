@@ -14,6 +14,8 @@ double PayOffCall::operator() (const double& S,const double& df) const
 */
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+matrix PayOffBasket::GetWeights() { return Weights; };
+
 PayOffBasketCall::PayOffBasketCall(matrix inputWeights, matrix inputS,const double& inputK)
 {
 	Weights = inputWeights;
@@ -31,6 +33,15 @@ double PayOffBasketCall::operator() (matrix inputS,const double& df)
 
 	return std::max(indexvalue(0,0) - K*df, 0.0); // Basket Call payoff
 };
+
+double PayOffBasketCall::operator() (double I, const double& df)
+{
+
+	return std::max(I - K * df, 0.0);
+
+
+};
+
 
 PayOffControlVarBasketCall::PayOffControlVarBasketCall(matrix inputWeights, matrix inputS,const double& inputK)
 {
@@ -54,6 +65,15 @@ double PayOffControlVarBasketCall::operator() (matrix S,const double& df)
 	//indexvalue.Print();
 	return std::max(exp(indexvalue(0,0)) - K*df, 0.0); // Control Variable for Basket Call payoff
 };
+
+double  PayOffControlVarBasketCall::operator() (double I, const double& df)
+{
+
+	return std::max(exp(I) - K * df, 0.0);
+
+
+};
+
 
 ClosedFormulaBasketCall::ClosedFormulaBasketCall(matrix inputWeights, matrix inputS, matrix inputVarCovar, const double& inputK,
 	const double& inputrate, const double& inputtime) :
@@ -104,6 +124,15 @@ double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 	// std::cout << "N_d1 : " << N_d1 << std::endl;
 	// std::cout << "N_d2 : " << N_d2 << std::endl;
 	return (indexvalue * N_d1 - df * K * N_d2);
+};
+
+
+double ClosedFormulaBasketCall::operator() (double I, const double& df)
+{
+
+	return std::max(I - K * df, 0.0);
+
+
 };
 
 double normalCDF(double x)

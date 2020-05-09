@@ -51,6 +51,25 @@ matrix RandomProcess::GetAllPaths() {
 
 };
 
+
+matrix RandomProcess::GetAllPathsAnti()
+{
+	std::vector<double> element;
+	std::vector<std::vector<double>> res;
+	for (size_t single = 0; single < PathsAntithetic.size(); single++)
+	{
+
+		element = PathsAntithetic[single]->GetAllValues();
+		res.push_back(element);
+
+	}
+
+	matrix chemins(res);
+	return chemins;
+
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -231,6 +250,7 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 
 		}
 
+
 		//Paths.push_back(Path);
 	}
 
@@ -258,6 +278,7 @@ void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSt
 	
 	Brownian.Resize(assets, nbSteps);
 	BrownianAntithetic.Resize(assets, nbSteps);
+	//maturity_spot.Resize(assets, 1);
 	
 	// matrix mean_vector(assets, 1);
 
@@ -318,19 +339,4 @@ void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSt
 	}
 
 };
-matrix BSEulerNDAntithetic::GetAllPathsAnti() 
-{
-	std::vector<double> element;
-	std::vector<std::vector<double>> res;
-	for (size_t single = 0; single < PathsAntithetic.size(); single++) 
-	{
 
-		element = PathsAntithetic[single]->GetAllValues();
-		res.push_back(element);
-
-	}
-
-	matrix chemins(res);
-	return chemins;
-
-};

@@ -40,6 +40,7 @@ class RandomProcess
 		virtual void Simulate(double startTime,double EndTime, size_t nbSteps) = 0;
 		SinglePath* GetPath(int pos = 0);
 		matrix GetAllPaths();
+		matrix GetAllPathsAnti();
 		double Expectation(size_t nb_simulation);
 		
 	protected:
@@ -48,6 +49,8 @@ class RandomProcess
 		std::vector<SinglePath*> Paths; //On évite de faire des copies avec le pointeur qui 
 		//pointe vers le vrai objet
 		int dimension;
+		std::vector<SinglePath*> PathsAntithetic;
+		matrix BrownianAntithetic;
 		
 };
 
@@ -126,6 +129,7 @@ class BlackScholesND : public RandomProcess
 		//	matrix varcov);
 		BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate);
 		~BlackScholesND() {};
+		
 
 
 		//cette classe créé l'objet BS qui créé à l'intérieur un chemin de brownien corrélés 
@@ -170,12 +174,11 @@ class BSEulerNDAntithetic : public BlackScholesND
 		~BSEulerNDAntithetic() {};
 		void Simulate(double startTime, double EndTime, size_t nbSteps);
 		
-		matrix GetAllPathsAnti();
+		
 	
-	private:
+	//private:
 	
-		std::vector<SinglePath*> PathsAntithetic;
-		matrix BrownianAntithetic;
+
 
 };
 
