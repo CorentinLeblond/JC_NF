@@ -130,17 +130,18 @@ public:
 	AmericanMonteCarlo_controlevariable() {};
 	~AmericanMonteCarlo_controlevariable() {};
 	AmericanMonteCarlo_controlevariable(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* CPayoff, RandomProcess* diffusion,
-		std::vector<basis_functions*> polynomial, double df);
+		std::vector<basis_functions*> polynomial, double df, double closed_form_price);
 	void Simulate(double start, double end, size_t steps);
 
 protected:
 	PayOffBasket* CPayoff;
 	matrix simulated_price_CP;
+	double ExpPriceClsForm;
 
 
 };
 
-class AmericanMonteCarlo_Antithetic : public AmericanMonteCarlo 
+class AmericanMonteCarlo_Antithetic : public AmericanMonteCarlo
 {
 
 public:
@@ -153,8 +154,29 @@ public:
 
 protected:
 	RandomProcess* x_diffusion;
+	 matrix simulated_price_anti;
+	 matrix average_price;
+
+};
+
+class AmericanMonteCarlo_Antithetic_CV : public AmericanMonteCarlo
+{
+
+public:
+	AmericanMonteCarlo_Antithetic_CV() {};
+	~AmericanMonteCarlo_Antithetic_CV() {};
+	AmericanMonteCarlo_Antithetic_CV(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* CPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, double df, double closed_form_price);
+	void Simulate(double start, double end, size_t steps);
 
 
-
+protected:
+	RandomProcess* x_diffusion;
+	matrix simulated_price_anti;
+	PayOffBasket* CPayoff;
+	matrix simulated_price_CP;
+	matrix simulated_price_CP_anti;
+	matrix average_price;
+	double ExpPriceClsForm;
 
 };
