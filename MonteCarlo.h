@@ -2,6 +2,7 @@
 #include  <vector>
 #include  "payoff.hpp"
 #include  "sde.hpp"
+#include "basisfunction.hpp"
 
 
 class MonteCarlo
@@ -79,11 +80,11 @@ class EuropeanBasket_Antithetic: public MonteCarloEuropean
 	public:
 
 		~EuropeanBasket_Antithetic() {};
-		EuropeanBasket_Antithetic(size_t nbSimu, PayOffBasket* Payoff, BSEulerNDAntithetic* diffusion);
+		EuropeanBasket_Antithetic(size_t nbSimu, PayOffBasket* Payoff, RandomProcess* diffusion);
 		void Simulate(double start, double end, size_t steps);
 
 	protected:
-		BSEulerNDAntithetic* x_diffusion;
+		RandomProcess* x_diffusion;
 		matrix paths;
 		matrix simulated_price_Anti;
 		matrix average_price;
@@ -102,4 +103,58 @@ class EuropeanBasket_Antithetic_CV: public EuropeanBasket_Antithetic
 		PayOffBasket* CPayoff;
 		double ExpPriceClsForm;
 	
+};
+
+class AmericanMonteCarlo : public MonteCarlo
+{
+public:
+	AmericanMonteCarlo() {};
+	~AmericanMonteCarlo() {};
+	AmericanMonteCarlo(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion, 
+		std::vector<basis_functions*> polynomial, double df);
+	void Simulate(double start, double end, size_t steps);
+	matrix GetEarlyExec();
+
+protected:
+	std::vector<basis_functions*> Phi;
+	double df;
+	std::vector<int> early_exec;
+
+};
+
+class AmericanMonteCarlo_controlevariable : public AmericanMonteCarlo
+{
+
+public:
+
+	AmericanMonteCarlo_controlevariable() {};
+	~AmericanMonteCarlo_controlevariable() {};
+	AmericanMonteCarlo_controlevariable(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* CPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, double df);
+	void Simulate(double start, double end, size_t steps);
+
+protected:
+	PayOffBasket* CPayoff;
+	matrix simulated_price_CP;
+
+
+};
+
+class AmericanMonteCarlo_Antithetic : public AmericanMonteCarlo 
+{
+
+public:
+	AmericanMonteCarlo_Antithetic() {};
+	~AmericanMonteCarlo_Antithetic() {};
+	AmericanMonteCarlo_Antithetic(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, double df);
+	void Simulate(double start, double end, size_t steps);
+
+
+protected:
+	RandomProcess* x_diffusion;
+
+
+
+
 };
