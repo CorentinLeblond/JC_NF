@@ -18,6 +18,7 @@ class matrix
 			matrix Cholesky();
 			void Print();
 			matrix area(size_t end_r, size_t end_c, std::vector<size_t> opt_start = {0,0});
+			void Clear();
 			
 			double mean();
 			double variance();

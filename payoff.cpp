@@ -89,19 +89,22 @@ double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 {
 	//On a la matrice de covariance en paramètre du constructeur, ainsi que ls weights -> on peut calculer la variance du basket
 	double variance_basket = 0.;
+	double squared_var = 0.;
 	double indexvalue = 1.;
 	matrix Weights_T(S_.nb_rows(), 1);
+	Weights_T = transpose(Weights);
 	//Spot price + transpose matrix of weights into column to enable compute basket variance later
 	for (size_t i = 0; i < S.nb_rows(); ++i)
 	{
 		//std::cout << "value of S " << indexvalue(i,0) << std::endl;
 		indexvalue *= std::pow(S_(i, 0), Weights(0, i));
-		Weights_T(i, 0) = Weights(0, i);
+		squared_var += VarCovar(i, i);
+		//Weights_T(i, 0) = Weights(0, i);
 		//std::cout << "value of log S " <<  log(S(i, 0)) << std::endl;
 	}
 	// std::cout << "index val : " << indexvalue << std::endl;
 	// std::cout << "Transposed matrix : " << std::endl;
-	Weights_T.Print();
+	//Weights_T.Print();
 	//Variance basket
 	Weights *= VarCovar;
 	Weights *= Weights_T; //Normalement un scalaire
@@ -113,7 +116,7 @@ double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 	//variance basket is sigma squared in the bs formula
 	double d1 = log(indexvalue / K);
 	// std::cout << "d1 : " << d1 << std::endl;
-	d1 += (rate + variance_basket / 2) * time;
+	d1 += (rate + variance_basket -0.5*squared_var / 2) * time;
 	// std::cout << "d1 : " << d1 << std::endl;
 	d1 /= sqrt(variance_basket * time);
 	// std::cout << "d1 : " << d1 << std::endl;

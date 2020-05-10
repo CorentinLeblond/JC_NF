@@ -42,6 +42,8 @@ class RandomProcess
 		matrix GetAllPaths();
 		matrix GetAllPathsAnti();
 		double Expectation(size_t nb_simulation);
+		double Get_Dt();
+		double Get_rate();
 		
 	protected:
 	
@@ -51,6 +53,8 @@ class RandomProcess
 		int dimension;
 		std::vector<SinglePath*> PathsAntithetic;
 		matrix BrownianAntithetic;
+		double dt_sde;
+		double rate_sde;
 		
 };
 

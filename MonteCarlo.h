@@ -3,6 +3,7 @@
 #include  "payoff.hpp"
 #include  "sde.hpp"
 #include "basisfunction.hpp"
+#include "tools.hpp"
 
 
 class MonteCarlo
@@ -14,7 +15,7 @@ class MonteCarlo
 		
 		virtual void Simulate(double start, double end, size_t steps)=0;
 		
-		double GetPrice(double& r, double& T);
+		double GetPrice();
 		double GetVariance();
 		void OptimalNbSimul(const double& errortolerated);
 		size_t GetNbSimul();
@@ -27,6 +28,8 @@ class MonteCarlo
 		double MC_price;
 		double MC_variance;
 		matrix simulated_price;
+		double r;
+		double dt;
 
 };
 
@@ -111,9 +114,11 @@ public:
 	AmericanMonteCarlo() {};
 	~AmericanMonteCarlo() {};
 	AmericanMonteCarlo(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion, 
-		std::vector<basis_functions*> polynomial, double df);
-	void Simulate(double start, double end, size_t steps);
+		std::vector<basis_functions*> polynomial);
+	//virtual void Simulate(double start, double end, size_t steps) = 0;
 	matrix GetEarlyExec();
+	matrix C_Hat_regression(matrix Index_time_t, matrix value);
+	//, std::vector<basis_functions*> polynomial
 
 protected:
 	std::vector<basis_functions*> Phi;
@@ -122,15 +127,29 @@ protected:
 
 };
 
-class AmericanMonteCarlo_controlevariable : public AmericanMonteCarlo
+class AmericanMonteCarlo_basket : public AmericanMonteCarlo
+{
+public:
+	AmericanMonteCarlo_basket() {};
+	~AmericanMonteCarlo_basket() {};
+	AmericanMonteCarlo_basket(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial);
+	void Simulate(double start, double end, size_t steps);
+
+
+protected:
+
+};
+
+class AmericanMonteCarlo_basket_controlevariable : public AmericanMonteCarlo
 {
 
 public:
 
-	AmericanMonteCarlo_controlevariable() {};
-	~AmericanMonteCarlo_controlevariable() {};
-	AmericanMonteCarlo_controlevariable(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* CPayoff, RandomProcess* diffusion,
-		std::vector<basis_functions*> polynomial, double df, double closed_form_price);
+	AmericanMonteCarlo_basket_controlevariable() {};
+	~AmericanMonteCarlo_basket_controlevariable() {};
+	AmericanMonteCarlo_basket_controlevariable(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* CPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, double closed_form_price);
 	void Simulate(double start, double end, size_t steps);
 
 protected:
@@ -141,14 +160,14 @@ protected:
 
 };
 
-class AmericanMonteCarlo_Antithetic : public AmericanMonteCarlo
+class AmericanMonteCarlo_basket_Antithetic : public AmericanMonteCarlo
 {
 
 public:
-	AmericanMonteCarlo_Antithetic() {};
-	~AmericanMonteCarlo_Antithetic() {};
-	AmericanMonteCarlo_Antithetic(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
-		std::vector<basis_functions*> polynomial, double df);
+	AmericanMonteCarlo_basket_Antithetic() {};
+	~AmericanMonteCarlo_basket_Antithetic() {};
+	AmericanMonteCarlo_basket_Antithetic(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial);
 	void Simulate(double start, double end, size_t steps);
 
 
@@ -159,14 +178,14 @@ protected:
 
 };
 
-class AmericanMonteCarlo_Antithetic_CV : public AmericanMonteCarlo
+class AmericanMonteCarlo_basket_Antithetic_CV : public AmericanMonteCarlo
 {
 
 public:
-	AmericanMonteCarlo_Antithetic_CV() {};
-	~AmericanMonteCarlo_Antithetic_CV() {};
-	AmericanMonteCarlo_Antithetic_CV(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* CPayoff, RandomProcess* diffusion,
-		std::vector<basis_functions*> polynomial, double df, double closed_form_price);
+	AmericanMonteCarlo_basket_Antithetic_CV() {};
+	~AmericanMonteCarlo_basket_Antithetic_CV() {};
+	AmericanMonteCarlo_basket_Antithetic_CV(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* CPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, double closed_form_price);
 	void Simulate(double start, double end, size_t steps);
 
 
@@ -178,5 +197,100 @@ protected:
 	matrix simulated_price_CP_anti;
 	matrix average_price;
 	double ExpPriceClsForm;
+
+};
+
+class BermudeanMonteCarlo : public AmericanMonteCarlo 
+{
+public: 
+
+	BermudeanMonteCarlo() {};
+	~BermudeanMonteCarlo() {};
+	BermudeanMonteCarlo(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, CalendarManagement* wkday, matrix exec_schedule);
+	//virtual void Simulate(double start, double end, size_t steps)=0;
+
+
+protected:
+	matrix exec_schedule;
+	CalendarManagement* wkday;
+	matrix Dt_schedule;
+
+};
+
+class Bermudean_BasketOption : public BermudeanMonteCarlo
+{
+public: 
+
+	Bermudean_BasketOption() {};
+	~Bermudean_BasketOption() {};
+	Bermudean_BasketOption(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, CalendarManagement* wkday,matrix exec_schedule);
+	void Simulate(double start, double end, size_t steps);
+
+protected:
+
+
+};
+
+class Bermudean_BasketOption_CV : public BermudeanMonteCarlo
+{
+
+public:
+
+	Bermudean_BasketOption_CV() {};
+	~Bermudean_BasketOption_CV() {};
+	Bermudean_BasketOption_CV(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* control_payoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, CalendarManagement* wkday,matrix exec_schedule,double closed_form_price);
+	void Simulate(double start, double end, size_t steps);
+
+
+protected:
+	double ExpPriceClsForm;
+	PayOffBasket* CPayoff;
+	matrix simulated_price_CP;
+
+};
+
+class Bermudean_BasketOption_antithetic : public BermudeanMonteCarlo
+{
+
+public:
+
+	Bermudean_BasketOption_antithetic() {};
+	~Bermudean_BasketOption_antithetic() {};
+	Bermudean_BasketOption_antithetic(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, CalendarManagement* wkday, matrix exec_schedule);
+	void Simulate(double start, double end, size_t steps);
+
+
+protected:
+	RandomProcess* x_diffusion;
+	matrix simulated_price_anti;
+	matrix average_price;
+
+
+};
+
+class Bermudean_BasketOption_antithetic_CV : public BermudeanMonteCarlo
+{
+
+public:
+	Bermudean_BasketOption_antithetic_CV() {};
+	~Bermudean_BasketOption_antithetic_CV() {};
+	Bermudean_BasketOption_antithetic_CV(size_t nbSimu, PayOffBasket* InputPayoff, PayOffBasket* control_payoff, RandomProcess* diffusion,
+		std::vector<basis_functions*> polynomial, CalendarManagement* wkday, matrix exec_schedule, double closed_form_price);
+	void Simulate(double start, double end, size_t steps);
+
+protected:
+
+	RandomProcess* x_diffusion;
+	matrix simulated_price_anti;
+	PayOffBasket* CPayoff;
+	matrix simulated_price_CP;
+	matrix simulated_price_CP_anti;
+	matrix average_price;
+	double ExpPriceClsForm;
+
 
 };
