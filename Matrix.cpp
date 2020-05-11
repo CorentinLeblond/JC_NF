@@ -466,8 +466,11 @@ matrix Inverse(matrix mat, int n)
 	inverse.Resize(mat.nb_cols(), mat.nb_rows());
 	if (det == 0)
 	{
-		std::cout << "Singular matrix, can't find its inverse" << std::endl;;
-		return inverse;
+		std::cout << "Using Cholesky" << std::endl;;
+
+		Inverse_Cholesky(mat).Print();
+
+		return Inverse_Cholesky(mat);
 	}
 	else 
 	{
