@@ -1833,7 +1833,7 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
 
-		std::cout << "simulation " << s << std::endl;
+		//std::cout << "simulation " << s << std::endl;
 		if (s % 2 == 0)
 		{
 			x_diffusion->Simulate(start, end, steps);
