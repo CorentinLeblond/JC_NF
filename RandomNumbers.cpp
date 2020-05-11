@@ -393,13 +393,13 @@ GaussianVectorDiag::GaussianVectorDiag(Normal* inputngnr, matrix inputSigma, mat
 	n = CovarMatrix.nb_rows();
 	nrot= 0;
 	jacobi(CovarMatrix,n,d, v, nrot);
-	std::cout<<"CovarMatrix after function called"<<std::endl;
-	CovarMatrix.Print();
+	// std::cout<<"CovarMatrix after function called"<<std::endl;
+	// CovaqrMatrix.Print();
 	std::cout<<"d matrix of eigevalues"<<std::endl;
 	d.Print();
-	std::cout<<"v matrix of eigenvectors"<<std::endl;
+	std::cout<<"v matrix of eigenvectors (normalized)"<<std::endl;
 	v.Print();
-	std::cout<<"nrot"<<nrot<<std::endl;
+	std::cout<<"nrotation "<<nrot<<std::endl;
 	d.Diagonalization();
 	std::cout<<"d matrix of eigevalues"<<std::endl;
 	d.Print();
@@ -407,12 +407,11 @@ GaussianVectorDiag::GaussianVectorDiag(Normal* inputngnr, matrix inputSigma, mat
 	d.SQRT();
 	d.Print();
 	B = v*d;
-	std::cout<<"output matrix"<<std::endl;
-	B.Print();
+	// std::cout<<"output matrix"<<std::endl;
+	// B.Print();
 };
 
-#define ROTATE(a,i,j,k,l) g=a(i,j);h=a(k,l);a(i,j)=g-s*(h+g*tau);\
-a(k,l)=h+s*(g-h*tau);
+
 
 matrix GaussianVectorDiag::CorrelatedGaussianVector()
 {
@@ -438,6 +437,10 @@ matrix GaussianVectorDiag::CorrelatedGaussianVector()
 	
 	return a;
 };
+
+#define ROTATE(a,i,j,k,l) g=a(i,j);h=a(k,l);a(i,j)=g-s*(h+g*tau);\
+	a(k,l)=h+s*(g-h*tau);
+
 void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 {/* 
 	Computes all eigenvalues and eigenvectors of a real symmetric matrix a[1..n][1..n]. On
@@ -445,18 +448,20 @@ void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 	v[1..n][1..n] is a matrix whose columns contain, on output, the normalized eigenvectors of
 	a. nrot returns the number of Jacobi rotations that were required. */
 	int j,iq,ip,i;
-	double tresh,theta,tau,t,sm,s,h,g,c,*b,*z;
-	b=vector(1,n);
-	z=vector(1,n);
+	double tresh,theta,tau,t,sm,s,h,g,c;//,*b,*z;
+	matrix b(n,1);
+	matrix z(n,1);
 	for(ip=0;ip<n;ip++) 
 	{
 		for(iq=0;iq<n;iq++) v(ip,iq)=0.0;
 		v(ip,ip)=1.0;
+		std::cout<<"should have identity matrix below"<<std::endl;
+		v.Print();
 	}
 	for (ip=0;ip<n;ip++) 
 	{
-		b[ip]=d(ip,0)=a(ip,ip);
-		z[ip]=0.0;
+		b(ip,0)=d(ip,0)=a(ip,ip);
+		z(ip,0)=0.0;
 	}
 	nrot=0;
 	for (i=0;i<50;i++) 
@@ -469,8 +474,9 @@ void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 		}
 		if (sm == 0.0) 
 		{
-			free_vector(z,1,n);
-			free_vector(b,1,n);
+			b.Clear();
+			z.Clear();
+			// free_vector(b,0,n);
 			return;
 		}
 		if (i < 3)
@@ -500,8 +506,8 @@ void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 					s=t*c;
 					tau=s/(1.0+c);
 					h=t*a(ip,iq);
-					z[ip] -= h;
-					z[iq] += h;
+					z(ip,0) -= h;
+					z(iq,0) += h;
 					d(ip,0) -= h;
 					d(iq,0) += h;
 					a(ip,iq)=0.0;
@@ -509,11 +515,11 @@ void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 					{
 						ROTATE(a,j,ip,j,iq)
 					}
-					for(j=ip;j<iq-1;j++)
+					for(j=ip+1;j<iq-1;j++)
 					{
 						ROTATE(a,ip,j,j,iq)
 					}
-					for(j=iq;j<n;j++)
+					for(j=iq+1;j<n;j++)
 					{
 						ROTATE(a,ip,j,iq,j)
 					}
@@ -527,28 +533,31 @@ void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 		}
 		for (ip=0;ip<n;ip++)
 		{
-			b[ip] += z[ip];
-			d(ip,0)=b[ip];
-			z[ip]=0.0; 
+			b(ip,0) += z(ip,0);
+			d(ip,0)=b(ip,0);
+			z(ip,0)=0.0; 
 		}
 	}
-	std::cout << "Too many iterations in routine jacobi"<<std::endl;
+	// std::cout << "Too many iterations in routine jacobi"<<std::endl;
 }
-#define NR_END 1
-#define FREE_ARG char*
-void free_vector(double *v, long nl, long nh)
-/* free a float vector allocated with vector() */
-{
-	free((FREE_ARG) (v+nl-NR_END));
-}
-double *vector(long nl, long nh)
-/* allocate a float vector with subscript range v[nl..nh] */
-{
-	double *v;
-	v=(double *)malloc((size_t) ((nh-nl+1+NR_END)*sizeof(double)));
-	if (!v) std::cout<<"allocation failure in vector()"<<std::endl;
-	return v-nl+NR_END;
-}
+
+// #define NR_END 1
+// #define FREE_ARG char*
+// void free_vector(double *v, long nl, long nh)
+// /* free a float vector allocated with vector() */
+// {
+	// free((FREE_ARG) (v+nl-NR_END));
+// }
+// double *vector(long nl, long nh)
+// /* allocate a float vector with subscript range v[nl..nh] */
+// {
+	// double *v;
+	// v=(double *)malloc((size_t) ((nh-nl+1+NR_END)*sizeof(double)));
+	// v=(double *)malloc((size_t) ((nh-nl+NR_END)*sizeof(double)));
+	// if (!v) std::cout<<"allocation failure in vector()"<<std::endl;
+	// return v-nl+NR_END;
+// }
+
 ////////////////////////////////////////////////////////////////////
 // Python Version
 		// ## module jacobi
