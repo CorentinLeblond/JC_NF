@@ -21,7 +21,6 @@ class matrix
 			void Clear();
 			
 			void SQRT();
-			void Clear();
 			
 			double mean();
 			double variance();

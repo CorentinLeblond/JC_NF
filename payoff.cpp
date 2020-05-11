@@ -98,7 +98,7 @@ double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 	{
 		//std::cout << "value of S " << indexvalue(i,0) << std::endl;
 		indexvalue *= std::pow(S_(i, 0), Weights(0, i));
-		squared_var += VarCovar(i, i);
+		squared_var += VarCovar(i, i)* Weights(0, i);
 		//Weights_T(i, 0) = Weights(0, i);
 		//std::cout << "value of log S " <<  log(S(i, 0)) << std::endl;
 	}
@@ -116,7 +116,7 @@ double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 	//variance basket is sigma squared in the bs formula
 	double d1 = log(indexvalue / K);
 	// std::cout << "d1 : " << d1 << std::endl;
-	d1 += (rate + variance_basket -0.5*squared_var / 2) * time;
+	d1 += (rate + 0.5*variance_basket -0.5*squared_var / 2) * time;
 	// std::cout << "d1 : " << d1 << std::endl;
 	d1 /= sqrt(variance_basket * time);
 	// std::cout << "d1 : " << d1 << std::endl;

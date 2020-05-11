@@ -1,14 +1,12 @@
 #include "Tools.hpp"
 #include<cmath>
 
-
 rounded_workingdays::rounded_workingdays(size_t opt_day_ahead):
 opt_day_ahead(opt_day_ahead)
 {
 };
 
-
-matrix rounded_workingdays::index_executed(matrix allpaths, matrix schedule, double dt_sde)
+matrix rounded_workingdays::index_executed(matrix allpaths, matrix schedule, double steps)
 {
 	size_t x;
 	size_t cols_check = 1;
@@ -22,7 +20,10 @@ matrix rounded_workingdays::index_executed(matrix allpaths, matrix schedule, dou
 	{
 		//std::cout << "here" << std::endl;
 		//std::cout << schedule(s, 0) << std::endl;
-		x = ceil(schedule(s, 0)*dt_sde) + opt_day_ahead; 
+		x = ceil(schedule(s, 0)*steps) + opt_day_ahead; 
+
+		//std::cout << "column " << x << std::endl;
+		//std::cout << x << std::endl;
 		//round the value to the nearest larger integer that represents the nearest following working day
 		//the opt_day_ahead parameter will be used to tune the number of following working days that can be used
 	
@@ -36,6 +37,8 @@ matrix rounded_workingdays::index_executed(matrix allpaths, matrix schedule, dou
 	
 	}
 
+
+
 	return tmp;
 
 };
@@ -48,7 +51,7 @@ double LinearInterpolation::MakeInterpolation(double x, double y, double f_x, do
 	return slope * (evalpoint - x) + f_x;
 }
 
-matrix LinearInterpolation::index_executed(matrix allpaths, matrix schedule,  double dt_sde)
+matrix LinearInterpolation::index_executed(matrix allpaths, matrix schedule,  double steps)
 {
 	//std::cout << "Enter Linear interpo " << std::endl;
 	//Assumption, schedule is column matrix
@@ -64,12 +67,12 @@ matrix LinearInterpolation::index_executed(matrix allpaths, matrix schedule,  do
 	for (size_t i = 0; i < allpaths.nb_cols()-1; ++i) //Boucle sur nb step
 	{
 		//std::cout << "in the loop" << std::endl;
-		if ((i + 1) * dt_sde >= schedule(k, 0))
+		if ((i + 1) * steps >= schedule(k, 0)*steps)
 		{
 			for (size_t j = 0; j < nb_asset; ++j)
 			{
 				//std::cout << "second loop" << std::endl;
-				tmp(j, k) =  MakeInterpolation(i * dt_sde, (i + 1) * dt_sde, allpaths(j, i), allpaths(j, i + 1), schedule(k, 0));
+				tmp(j, k) =  MakeInterpolation(i * steps, (i + 1) * steps, allpaths(j, i), allpaths(j, i + 1), schedule(k, 0));
 			}
 			k += 1;
 			//std::cout << k << std::endl;

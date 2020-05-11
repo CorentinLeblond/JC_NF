@@ -384,7 +384,7 @@ matrix GaussianVectorCholesky::CorrelatedGaussianVector()
 	return a;
 };
 
-GaussianVectorDiag::GaussianVectorDiag(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix 	)
+GaussianVectorDiag::GaussianVectorDiag(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar)
 	: GaussianVector(inputngnr, inputSigma,  inputcorrel, inputvarcovar)
 {
 	std::cout<<"GaussianVectorDiag Constructor"<<std::endl;
