@@ -96,6 +96,12 @@ matrix matrix::Cholesky()
 	}
 	return L;
 };
+
+
+void matrix::Clear() 
+{
+	m_data.clear();
+};
  
 double& matrix::operator()(std::size_t i, std::size_t j)
 {

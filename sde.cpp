@@ -69,6 +69,16 @@ matrix RandomProcess::GetAllPathsAnti()
 
 };
 
+double RandomProcess::Get_Dt()
+{
+	return dt_sde;
+};
+
+double RandomProcess::Get_rate()
+{
+	return rate_sde;
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////////
 
@@ -83,6 +93,7 @@ void Brownian1D::Simulate(double startTime,double endTime,size_t nbSteps)
 	SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
 	Path->InsertValue(0.);
 	double dt = (endTime - startTime) / nbSteps;
+	dt_sde = dt;
 	double lastInserted = 0.;
 	
 	for(size_t i = 0; i < nbSteps; ++i)
@@ -101,7 +112,10 @@ BlackScholes1D::BlackScholes1D(RandomGenerator* Gen, double spot, double rate, d
 	Rate(rate),
 	Vol(vol),
 	RandomProcess(Gen,1)
-{};
+{
+	rate_sde = rate;
+
+};
 ///////////////////////////////////////////////////////////////////////////////////////
 BSEuler1D::BSEuler1D(RandomGenerator* Gen, double spot, double rate, double vol):
 	BlackScholes1D(Gen,spot,rate,vol)
@@ -113,6 +127,7 @@ void BSEuler1D::Simulate(double startTime,double endTime,size_t nbSteps)
 	SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
 	Path->InsertValue(Spot);
 	double dt = (endTime - startTime) / nbSteps;
+	dt_sde = dt;
 	double lastInserted = Spot;
 	
 	for(size_t i = 0; i < nbSteps; ++i)
@@ -161,6 +176,7 @@ void BSEuler2D::Simulate(double startTime,double endTime,size_t nbSteps)
 	Path2->InsertValue(Spot2);
 	
 	double dt = (endTime - startTime) / nbSteps;
+	dt_sde = dt;
 	double lastInserted1 = Spot1;
 	double lastInserted2 = Spot2;
 
@@ -192,11 +208,15 @@ BlackScholesND::BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix sp
 	:m_gaussian(CorrelGaussian),
 	V_spot(spot_vec),
 	rate(inputrate)
-{};
+{
+	rate_sde = inputrate;
+};
 
 BSEulerND::BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate):
 	BlackScholesND(CorrelGaussian,spot_vec,inputrate)
-{ };
+{ 
+	rate_sde = inputrate;
+};
 
 
 void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
@@ -206,6 +226,7 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 	double last_spot = 0.;
 	double next_spot = 0.;
 	double dt = (endTime - startTime) / nbSteps;
+	dt_sde = dt;
 	Brownian.Resize(assets, nbSteps);
 	matrix mean_vector(assets, 1);
 
@@ -261,6 +282,7 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 BSEulerNDAntithetic::BSEulerNDAntithetic(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate):
 	BlackScholesND(CorrelGaussian,spot_vec,inputrate)
 { 
+	rate_sde = inputrate;
 };
 
 
@@ -275,6 +297,7 @@ void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSt
 	double next_spot = 0.;
 	double next_spotAnti = 0.;
 	double dt = (endTime - startTime) / nbSteps;
+	dt_sde = dt;
 	
 	Brownian.Resize(assets, nbSteps);
 	BrownianAntithetic.Resize(assets, nbSteps);
