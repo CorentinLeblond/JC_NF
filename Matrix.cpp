@@ -21,6 +21,20 @@ size_t matrix::nb_cols()
 {
 	return m_nb_cols;
 };
+void matrix::Clear()
+{
+	m_data.clear();
+};
+void matrix::SQRT()
+{
+	for(size_t i = 0; i<m_nb_rows;++i)
+	{
+		for(size_t j = 0; j<m_nb_cols;++j)
+		{
+		m_data[i][j] = sqrt(m_data[i][j]);
+		}
+	}
+};
 std::vector<std::vector<double>>& matrix::GetMatrix()
 {
 	return m_data;

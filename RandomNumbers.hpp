@@ -231,7 +231,7 @@ class GaussianVector
 		~GaussianVector(){};
 		
 		virtual matrix CorrelatedGaussianVector() =0;
-		
+		matrix GetB();
 	protected:
 		
 		size_t Nb_asset;
@@ -239,6 +239,8 @@ class GaussianVector
 		matrix Correl_matrix; //Matrix containing all correlation coefficients between -1,1
 		matrix CovarMatrix;
 		Normal* Ngnr;
+		
+		matrix B;
 
 };
 class GaussianVectorCholesky: public GaussianVector
@@ -252,9 +254,6 @@ class GaussianVectorCholesky: public GaussianVector
 				
 		matrix CorrelatedGaussianVector();
 		
-	protected:
-	
-		matrix LowerCholesly;
 };
 class GaussianVectorDiag: public GaussianVector
 {
@@ -269,10 +268,15 @@ class GaussianVectorDiag: public GaussianVector
 		
 	protected:
 	
-		matrix LowerDiag;
+		matrix v;
+		matrix d;
+		int n;
+		int nrot;
+	
 };
-
-
+void free_vector(double *v, long nl, long nh);
+void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot);
+double *vector(long nl, long nh);
 /*
 
 int j,k,l;
