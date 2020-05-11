@@ -376,23 +376,23 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	std::cout << "Variance berm " << var_berm << std::endl;
 
 
-	UniformGenerator* ugen11 = new EcuyerCombined();
-	Normal* ngen11 = new NormalBoxMuller(ugen11, 0., 1.);
+	//UniformGenerator* ugen11 = new EcuyerCombined();
+	//Normal* ngen11 = new NormalBoxMuller(ugen11, 0., 1.);
 
-	GaussianVectorCholesky* vectorG11 = new GaussianVectorCholesky(ngen11, Sigma, Correl, CovarMatrix);
-	RandomProcess* BSberm_CV = new BSEulerND(vectorG11, spot_m, rate);
+	//GaussianVectorCholesky* vectorG11 = new GaussianVectorCholesky(ngen11, Sigma, Correl, CovarMatrix);
+	//RandomProcess* BSberm_CV = new BSEulerND(vectorG11, spot_m, rate);
 
-	clock::time_point start_berm_CV = clock::now();
-	Bermudean_BasketOption_CV berm_CV(N, bsktcall, bsktcallCV, BSberm_CV, basefunc, wkdayfunc, Schedule_exec, price_cf);
-	berm_CV.Simulate(startTime, endTime, nbsteps);
-	clock::time_point end_berm_CV = clock::now(); //We take again the time once the entire simulation is done
-	clock::duration execution_timebermCV = end_berm_CV - start_berm_CV; //We compute the differentce and print it next line
-	std::cout << "exec time for berm CV MC Basket call: " << std::chrono::duration <double, std::ratio<1>>(execution_timebermCV).count() << std::endl;
-	double price_berm_CV = berm_CV.GetPrice();
-	double var_berm_CV = berm_CV.GetVariance();
+	//clock::time_point start_berm_CV = clock::now();
+	//Bermudean_BasketOption_CV berm_CV(N, bsktcall, bsktcallCV, BSberm_CV, basefunc, wkdayfunc, Schedule_exec, price_cf);
+	//berm_CV.Simulate(startTime, endTime, nbsteps);
+	//clock::time_point end_berm_CV = clock::now(); //We take again the time once the entire simulation is done
+	//clock::duration execution_timebermCV = end_berm_CV - start_berm_CV; //We compute the differentce and print it next line
+	//std::cout << "exec time for berm CV MC Basket call: " << std::chrono::duration <double, std::ratio<1>>(execution_timebermCV).count() << std::endl;
+	//double price_berm_CV = berm_CV.GetPrice();
+	//double var_berm_CV = berm_CV.GetVariance();
 
-	std::cout << "Price of berm CV " << price_berm_CV << std::endl;
-	std::cout << "Variance berm CV " << var_berm_CV << std::endl;
+	//std::cout << "Price of berm CV " << price_berm_CV << std::endl;
+	//std::cout << "Variance berm CV " << var_berm_CV << std::endl;
 
 
 
@@ -415,23 +415,23 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	std::cout << "Variance berm anti " << var_berm_anti << std::endl;
 
 
-	UniformGenerator* ugen13 = new EcuyerCombined();
-	Normal* ngen13 = new NormalBoxMuller(ugen13, 0., 1.);
+	//UniformGenerator* ugen13 = new EcuyerCombined();
+	//Normal* ngen13 = new NormalBoxMuller(ugen13, 0., 1.);
 
-	GaussianVectorCholesky* vectorG13 = new GaussianVectorCholesky(ngen13, Sigma, Correl, CovarMatrix);
-	RandomProcess* BS_berm_anti_CV = new BSEulerNDAntithetic(vectorG13, spot_m, rate);
+	//GaussianVectorCholesky* vectorG13 = new GaussianVectorCholesky(ngen13, Sigma, Correl, CovarMatrix);
+	//RandomProcess* BS_berm_anti_CV = new BSEulerNDAntithetic(vectorG13, spot_m, rate);
 
-	clock::time_point start_berm_anti_CV = clock::now();
-	Bermudean_BasketOption_antithetic_CV berm_anti_CV(N, bsktcall, bsktcallCV, BS_berm_anti_CV, basefunc, wkdayfunc, Schedule_exec, price_cf);
-	berm_anti_CV.Simulate(startTime, endTime, nbsteps);
-	clock::time_point end_berm_anti_CV = clock::now(); //We take again the time once the entire simulation is done
-	clock::duration execution_timebermantiCV = end_berm_anti_CV - start_berm_anti_CV; //We compute the differentce and print it next line
-	std::cout << "exec time for berm anti MC Basket call: " << std::chrono::duration <double, std::ratio<1>>(execution_timebermantiCV).count() << std::endl;
-	double price_berm_anti_CV = berm_anti_CV.GetPrice();
-	double var_berm_anti_CV = berm_anti_CV.GetVariance();
+	//clock::time_point start_berm_anti_CV = clock::now();
+	//Bermudean_BasketOption_antithetic_CV berm_anti_CV(N, bsktcall, bsktcallCV, BS_berm_anti_CV, basefunc, wkdayfunc, Schedule_exec, price_cf);
+	//berm_anti_CV.Simulate(startTime, endTime, nbsteps);
+	//clock::time_point end_berm_anti_CV = clock::now(); //We take again the time once the entire simulation is done
+	//clock::duration execution_timebermantiCV = end_berm_anti_CV - start_berm_anti_CV; //We compute the differentce and print it next line
+	//std::cout << "exec time for berm anti MC Basket call: " << std::chrono::duration <double, std::ratio<1>>(execution_timebermantiCV).count() << std::endl;
+	//double price_berm_anti_CV = berm_anti_CV.GetPrice();
+	//double var_berm_anti_CV = berm_anti_CV.GetVariance();
 
-	std::cout << "Price of berm anti and CV " << price_berm_anti_CV << std::endl;
-	std::cout << "Variance berm anti and CV " << var_berm_anti_CV << std::endl;
+	//std::cout << "Price of berm anti and CV " << price_berm_anti_CV << std::endl;
+	//std::cout << "Variance berm anti and CV " << var_berm_anti_CV << std::endl;
 
 
 	
@@ -504,12 +504,12 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	//delete ngen9;
 	delete ugen10;
 	delete ngen10;
-	delete ugen11;
-	delete ngen11;
+	//delete ugen11;
+	//delete ngen11;
 	delete ugen12;
 	delete ngen12;
-	delete ugen13;
-	delete ngen13;
+	//delete ugen13;
+	//delete ngen13;
 	for (size_t i = 0; i < basefunc.size(); i++) {
 		delete basefunc[i];
 	};
