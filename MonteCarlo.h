@@ -228,7 +228,6 @@ public:
 		std::vector<basis_functions*> polynomial, CalendarManagement* wkday,matrix exec_schedule);
 	void Simulate(double start, double end, size_t steps);
 
-protected:
 
 
 };

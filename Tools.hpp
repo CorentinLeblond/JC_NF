@@ -7,7 +7,7 @@ class CalendarManagement
 public: 
 	CalendarManagement() {};
 	~CalendarManagement() {};
-	virtual matrix index_executed(matrix exec_schedule, matrix allpaths, double dt_sde) = 0;
+	virtual matrix index_executed(matrix exec_schedule, matrix allpaths, double steps) = 0;
 
 
 };
@@ -18,7 +18,8 @@ public:
 	rounded_workingdays() {};
 	~rounded_workingdays() {};
 	rounded_workingdays(size_t opt_day_ahead);
-	matrix index_executed(matrix allpaths, matrix exec_schedule, double dt_sde);
+	matrix index_executed(matrix allpaths, matrix exec_schedule, double steps);
+	
 
 protected:
 	size_t opt_day_ahead;
@@ -45,6 +46,6 @@ public:
 	LinearInterpolation() {};
 	~LinearInterpolation() {};
 	double MakeInterpolation(double x, double y, double f_x, double f_y, double evalpoint);
-	matrix  index_executed(matrix allpaths, matrix schedule, double dt_sde);
+	matrix  index_executed(matrix allpaths, matrix schedule, double steps);
 
 };
