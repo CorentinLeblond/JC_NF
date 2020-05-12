@@ -286,7 +286,7 @@ void EuropeanBasket_Antithetic_CV::Simulate(double start, double end, size_t ste
 
 AmericanMonteCarlo::AmericanMonteCarlo(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
 	std::vector<basis_functions*> polynomial) :
-	Phi(polynomial), df(1.)
+	Phi(polynomial)
 {
 	r = diffusion->Get_rate();
 	Payoff = InputPayoff;
@@ -344,6 +344,8 @@ matrix AmericanMonteCarlo::C_Hat_regression(matrix Index_time_t, matrix Value)
 	Phi_V.Clear();
 	inv_SDP_Phi.Clear();
 	Beta_hat.Clear();
+
+	//C_hat.Print();
 	
 	return C_hat;
 
@@ -405,7 +407,7 @@ void AmericanMonteCarlo_basket::Simulate(double start, double end, size_t steps)
 
 	}
 
-	df = exp(-r * m_diffusion->Get_Dt());
+	double df = exp(-r * m_diffusion->Get_Dt());
 
 	// Regression part 
 	for(size_t t = steps - 2; t>0; t--) 
@@ -454,7 +456,7 @@ void AmericanMonteCarlo_basket::Simulate(double start, double end, size_t steps)
 			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
 			{
 				simulated_price(i,0) = Payoff->operator()(Index(i, t));
-				early_exec.push_back(i);
+				//early_exec.push_back(i);
 			}
 			
 			{
@@ -570,7 +572,7 @@ void AmericanMonteCarlo_basket_controlevariable::Simulate(double start, double e
 
 	}
 
-	df = exp(-r * m_diffusion->Get_Dt());
+	double df = exp(-r * m_diffusion->Get_Dt());
 	// Regression part 
 
 	for (size_t t = steps - 2; t > 0; t--)
@@ -691,6 +693,9 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 
 	std::cout << "American MC with antithetic" << std::endl;
 
+	//simulated_price.Clear();
+	//simulated_price_anti.Clear();
+	//average_price.Clear();
 
 	simulated_price.Resize(m_Simulation/2, 1);
 	simulated_price_anti.Resize(m_Simulation/2, 1);
@@ -743,13 +748,13 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 
 			for (size_t i = 0; i < steps; i++)
 			{
-				Index(k, i) = chm(0, i);
+				Index(k_a, i) = chm(0, i);
 
 			}
 
-			simulated_price(k, 0) = Payoff->operator()(Index(k, Index.nb_cols() - 1));
+			simulated_price(k_a, 0) = Payoff->operator()(Index(k_a, Index.nb_cols() - 1));
 
-			k += 1;
+			//k += 1;
 
 			
 
@@ -768,10 +773,12 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 
 			simulated_price_anti(k_a, 0) = Payoff->operator()(Index_anti(k_a, Index_anti.nb_cols() - 1));
 			k_a += 1;
+
+
 		}
 	}
 
-	df = exp(-r * m_diffusion->Get_Dt());
+	double df = exp(-r * x_diffusion->Get_Dt());
 	// Regression part 
 
 	for (size_t t = steps - 2; t > 0; t--)
@@ -826,12 +833,8 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 		Phi_V = Phit_T * V;
 		Phi_V_anti = Phit_T_anti * V_anti;
 
-		//std::cout << "simulation Phi" << std::endl;
 		inv_SDP_Phi = Inverse(SDP_Phi, SDP_Phi.nb_cols());
-		//inv_SDP_Phi.Print();
-		//std::cout << "simulation Phi anti" << std::endl;
 		inv_SDP_Phi_anti = Inverse(SDP_Phi_anti, SDP_Phi_anti.nb_cols());
-		//inv_SDP_Phi_anti.Print();
 
 		Beta_hat = inv_SDP_Phi * Phi_V;
 		Beta_hat_anti = inv_SDP_Phi_anti * Phi_V_anti;
@@ -849,8 +852,6 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 			}
 
 			{
-
-
 				simulated_price(i, 0) = df * simulated_price(i, 0);
 			}
 
@@ -862,7 +863,6 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 			}
 
 			{
-
 
 				simulated_price_anti(i, 0) = df * simulated_price_anti(i, 0);
 			}
@@ -999,15 +999,15 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 
 			for (size_t i = 0; i < steps; i++)
 			{
-				Index(k, i) = chm(0, i);
-				log_Index(k, i) = chm_2(0, i);
+				Index(k_a, i) = chm(0, i);
+				log_Index(k_a, i) = chm_2(0, i);
 
 			}
 
-			simulated_price(k, 0) = Payoff->operator()(Index(k, Index.nb_cols() - 1));
-			simulated_price_CP(k, 0) = CPayoff->operator()(log_Index(k, log_Index.nb_cols() - 1));
+			simulated_price(k_a, 0) = Payoff->operator()(Index(k_a, Index.nb_cols() - 1));
+			simulated_price_CP(k_a, 0) = CPayoff->operator()(log_Index(k_a, log_Index.nb_cols() - 1));
 
-			k += 1;
+			//k += 1;
 
 		}
 		else
@@ -1040,7 +1040,7 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 			k_a += 1;
 		}
 	}
-	df = exp(-r * x_diffusion->Get_Dt());
+	double df = exp(-r * x_diffusion->Get_Dt());
 
 	// Regression part 
 
@@ -1237,9 +1237,6 @@ Bermudean_BasketOption::Bermudean_BasketOption(size_t nbSimu, PayOffBasket* Inpu
 	BermudeanMonteCarlo(nbSimu, InputPayoff, diffusion,polynomial,wkday,exec_schedule)
 {
 	r = diffusion->Get_rate();
-	//Payoff = InputPayoff;
-	//m_Simulation = nbSimu;
-	//m_diffusion = diffusion;
 	MC_price = 0.;
 	MC_variance = 0.;
 	simulated_price.Resize(nbSimu, 1);
@@ -1249,18 +1246,19 @@ Bermudean_BasketOption::Bermudean_BasketOption(size_t nbSimu, PayOffBasket* Inpu
 
 void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 {
-//matrix Phit(m_Simulation, Phi.size());
-//matrix poly_order_n(m_Simulation, 1);
-//matrix Phit_T(Phi.size(), m_Simulation);
-//matrix SDP_Phi(Phi.size(), Phi.size());
-//matrix Phi_V(Phi.size(), 1);
-//matrix inv_SDP_Phi(Phi.size(), Phi.size());
-//matrix Beta_hat(Phi.size(), 1);
+		//matrix Phit(m_Simulation, Phi.size());
+		//matrix poly_order_n(m_Simulation, 1);
+		//matrix Phit_T(Phi.size(), m_Simulation);
+		//matrix SDP_Phi(Phi.size(), Phi.size());
+		//matrix Phi_V(Phi.size(), 1);
+		//matrix inv_SDP_Phi(Phi.size(), Phi.size());
+		//matrix Beta_hat(Phi.size(), 1);
 
 
 	std::cout << "Bermudean BasketOption LS" << std::endl;
 	simulated_price.Resize(m_Simulation, 1);
 	matrix weights = Payoff->GetWeights();
+	weights.Print();
 	matrix Index(m_Simulation, exec_schedule.nb_rows());
 	matrix ITM(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
 	matrix It(m_Simulation, 1);
@@ -1270,7 +1268,7 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 	matrix paths;
 	matrix interpolated_paths;
 	double dt_sde;
-	double test_df;
+	double df;
 
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
@@ -1280,20 +1278,14 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 		interpolated_paths = wkday->index_executed(paths, exec_schedule, steps);
 
 		
-
 		//interpolated_paths.Print();
 		chm = weights * interpolated_paths;
-		//std::cout << "end simulation " << s << std::endl;
+
 		for (size_t i = 0; i < chm.nb_cols(); i++)
 		{
 			Index(s, i) = chm(0, i);
 
 		}
-		//std::cout << "first value of chm  at simulation " <<  chm(0,0) << std::endl;
-		//std::cout << "4th value of chm  at simulation " << chm(0, 4) << std::endl;
-		//std::cout << "last value of chm  at simulation " << chm(0,9) << std::endl;
-
-
 		simulated_price(s, 0) = Payoff->operator()(Index(s, Index.nb_cols() - 1));
 		//populate the vector at maturity of the payoff
 
@@ -1309,25 +1301,14 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 	}
 
 	double last_dt = ceil(exec_schedule(0, 0) * steps) * dt_sde;
-	// Regression part 
-
-	//std::cout << " start regression" << std::endl;
-
 
 	size_t Isteps = Index.nb_cols() -2; //Index will have as much columns as there are execution dates.
 
-
-	//Dt_schedule.Print();
-	//std::cout << Isteps << std::endl;
+	// Regression part
 	for (size_t t = Isteps; t > 0; t--)
 	{
 
 		df = exp(-r * Dt_schedule(t, 0));
-		df = exp(-r * Dt_schedule(t, 0));
-		test_df = exp(-r * dt_sde);
-		std::cout << "constant dt " << test_df << std::endl;
-		std::cout << " dt schedule " << df << std::endl;
-		//std::cout << " Dt " << Dt_schedule(t, 0) << std::endl;
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
@@ -1341,6 +1322,7 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 			else { ITM(i, 0) = -1; };
 		}
 
+
 		C_hat = C_Hat_regression(It, V); //the function will apply the polynomes, create Beta_Hat, and return C_hat as a matrix
 
 		for (size_t i = 0; i < C_hat.nb_rows(); i++)
@@ -1349,7 +1331,6 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
 			{
 				simulated_price(i, 0) = Payoff->operator()(Index(i, t));
-				//early_exec.push_back(i);
 			}
 
 			{
@@ -1422,6 +1403,7 @@ void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 	matrix log_spot;
 	matrix interpolated_paths;
 	double dt_sde;
+	double df;
 
 	matrix CV(m_Simulation, 1);
 
@@ -1590,7 +1572,8 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 	matrix C_hat_anti(m_Simulation / 2, 1);
 	matrix V_anti(m_Simulation / 2, 1);
 	double dt_sde;
-	double test_df;
+	double df;
+	//double test_df;
 	size_t k = 0;
 	size_t k_a = 0;
 
@@ -1654,9 +1637,9 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 	{
 
 		df = exp(-r * Dt_schedule(t, 0));
-		test_df = exp(-r * dt_sde);
-		std::cout << "constant dt " << test_df << std::endl;
-		std::cout << " dt schedule " << df << std::endl;
+		//test_df = exp(-r * dt_sde);
+		//std::cout << "constant dt " << test_df << std::endl;
+		//std::cout << " dt schedule " << df << std::endl;
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
@@ -1822,6 +1805,7 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 	matrix interpolated_paths;
 	matrix interpolated_paths_anti;
 	double dt_sde;
+	double df;
 
 	size_t k = 0;
 	size_t k_a = 0;

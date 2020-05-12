@@ -46,14 +46,14 @@ matrix operator*(matrix a, matrix b);
 matrix operator*(matrix a, const double& val);
 matrix operator*(const double& val,matrix a);
 
-matrix getCofactor(matrix mat, int p, int q, int n);
-double determinantOfMatrix(matrix mat, int n) ;
-matrix Inverse(matrix mat, int n);
+matrix getCofactor(matrix mat, int p, int q, size_t n);
+double determinantOfMatrix(matrix mat, size_t n) ;
+matrix Inverse(matrix mat, size_t n);
 matrix adjoint(matrix A);
 matrix transpose(matrix A);
 matrix Inverse_Cholesky(matrix mat);
 void appendrow(matrix mat, matrix row);
 void appendcol(matrix mat, matrix col);
-
+matrix LU_decomposition(matrix mat);
 
 matrix VarCovarMatrix(matrix vol,matrix correl);

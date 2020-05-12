@@ -122,7 +122,6 @@ public:
 
 protected:
 	std::vector<basis_functions*> Phi;
-	double df;
 	std::vector<int> early_exec;
 
 };
