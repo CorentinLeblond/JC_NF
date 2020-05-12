@@ -32,3 +32,15 @@ public:
 //protected:
 
 };
+
+class Laguerre_test : public basis_functions
+{
+public:
+
+	Laguerre_test() {};
+	~Laguerre_test() {};
+	Laguerre_test(int order);
+	double operator()(double& value);
+	matrix operator()(matrix& InputMat);
+
+};

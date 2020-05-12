@@ -363,7 +363,7 @@ matrix operator*( const double& val,matrix a)
 
 
 //////////////////////////////
-matrix getCofactor(matrix mat, int p, int q, int n) 
+matrix getCofactor(matrix mat, int p, int q, size_t n) 
 { 
 	matrix temp(mat.nb_rows() - 1, mat.nb_cols() - 1);
     int i = 0, j = 0; 
@@ -393,7 +393,7 @@ matrix getCofactor(matrix mat, int p, int q, int n)
 	return temp;
 } 
 
-double determinantOfMatrix(matrix mat, int n) 
+double determinantOfMatrix(matrix mat, size_t n) 
 { 
     double D = 0.; // Initialize result 
   
@@ -459,18 +459,20 @@ matrix adjoint(matrix A)
 }
 
   
-matrix Inverse(matrix mat, int n) 
+matrix Inverse(matrix mat, size_t n) 
 { 
+
 	double det = determinantOfMatrix(mat,n);
 	matrix inverse;
 	inverse.Resize(mat.nb_cols(), mat.nb_rows());
 	if (det == 0)
 	{
-		std::cout << "Using Cholesky" << std::endl;;
-
-		Inverse_Cholesky(mat).Print();
-
-		return Inverse_Cholesky(mat);
+		//std::cout << "Can't find its inverse" << std::endl;
+		//std::cout << "Determinant = 0; try LU " << std::endl;
+		matrix LU = LU_decomposition(mat);
+		inverse = Inverse(LU, LU.nb_cols());
+		//inverse.Print();
+		return inverse;
 	}
 	else 
 	{
@@ -642,3 +644,45 @@ void appendcol(matrix mat, matrix col) {
 
 };
 
+matrix LU_decomposition(matrix mat)
+{
+	matrix lower(mat.nb_rows(), mat.nb_cols());
+	matrix upper(mat.nb_rows(), mat.nb_cols());
+
+	// Decomposing matrix into Upper and Lower 
+	// triangular matrix 
+	for (size_t i = 0; i < mat.nb_rows(); i++) {
+
+		// Upper Triangular 
+		for (size_t k = i; k < mat.nb_cols(); k++) {
+
+			// Summation of L(i, j) * U(j, k) 
+			int sum = 0;
+			for (size_t j = 0; j < i; j++)
+				sum += (lower(i, j) * upper(j, k));
+
+			// Evaluating U(i, k) 
+			upper(i, k) = mat(i, k) - sum;
+		}
+
+		// Lower Triangular 
+		for (size_t k = i; k < mat.nb_rows(); k++) {
+			if (i == k)
+				lower(i, i) = 1; // Diagonal as 1 
+			else {
+
+				// Summation of L(k, j) * U(j, i) 
+				int sum = 0;
+				for (size_t j = 0; j < i; j++)
+					sum += (lower(k, j) * upper(j, i));
+
+				// Evaluating L(k, i) 
+				lower(k, i) = (mat(k, i) - sum) / upper(i, i);
+			}
+		}
+	}
+
+	//lower.Print();
+	//upper.Print();
+	return lower * upper;
+};

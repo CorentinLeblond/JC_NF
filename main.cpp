@@ -239,8 +239,12 @@ std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 
 	std::vector<basis_functions*> basefunc;
 	
+	basefunc.push_back(new Poly_Laguerre(0));
 	basefunc.push_back(new Poly_Laguerre(1));
 	basefunc.push_back(new Poly_Laguerre(2));
+	//basefunc.push_back(new Laguerre_test(0));
+	//basefunc.push_back(new Laguerre_test(1));
+	//basefunc.push_back(new Laguerre_test(2));
 
 
 	double df2 = exp(-rate * dt);

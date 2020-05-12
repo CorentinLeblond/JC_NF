@@ -6,7 +6,7 @@ opt_day_ahead(opt_day_ahead)
 {
 };
 
-matrix rounded_workingdays::index_executed(matrix allpaths, matrix schedule, double steps)
+matrix rounded_workingdays::index_executed(matrix allpaths, matrix schedule, size_t steps)
 {
 	size_t x;
 	size_t cols_check = 1;
@@ -51,7 +51,7 @@ double LinearInterpolation::MakeInterpolation(double x, double y, double f_x, do
 	return slope * (evalpoint - x) + f_x;
 }
 
-matrix LinearInterpolation::index_executed(matrix allpaths, matrix schedule,  double steps)
+matrix LinearInterpolation::index_executed(matrix allpaths, matrix schedule,  size_t steps)
 {
 	//std::cout << "Enter Linear interpo " << std::endl;
 	//Assumption, schedule is column matrix
