@@ -1,19 +1,8 @@
 #include <iostream>
 #include "payoff.hpp"
-/*
-PayOffCall::PayOffCall(const double& K)
-{
-	m_K = K;
-};
-	
-	//Method to compute the initial condition of the Call option
-double PayOffCall::operator() (const double& S,const double& df) const 
-{
-	return std::max(S-m_K*df, 0.0); // Call payoff
-};
-*/
-/////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+/* This file contains all payoff related algorithm, for the basket call and control variate*/
 matrix PayOffBasket::GetWeights() { return Weights; };
 
 PayOffBasketCall::PayOffBasketCall(matrix inputWeights, matrix inputS,const double& inputK)
@@ -87,7 +76,6 @@ ClosedFormulaBasketCall::ClosedFormulaBasketCall(matrix inputWeights, matrix inp
 };
 double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 {
-	//On a la matrice de covariance en paramètre du constructeur, ainsi que ls weights -> on peut calculer la variance du basket
 	double variance_basket = 0.;
 	double squared_var = 0.;
 	double indexvalue = 1.;
@@ -96,36 +84,25 @@ double ClosedFormulaBasketCall::operator() (matrix S_, const double& df)
 	//Spot price + transpose matrix of weights into column to enable compute basket variance later
 	for (size_t i = 0; i < S.nb_rows(); ++i)
 	{
-		//std::cout << "value of S " << indexvalue(i,0) << std::endl;
 		indexvalue *= std::pow(S_(i, 0), Weights(0, i));
 		squared_var += VarCovar(i, i)* Weights(0, i);
-		//Weights_T(i, 0) = Weights(0, i);
-		//std::cout << "value of log S " <<  log(S(i, 0)) << std::endl;
 	}
-	// std::cout << "index val : " << indexvalue << std::endl;
-	// std::cout << "Transposed matrix : " << std::endl;
-	//Weights_T.Print();
-	//Variance basket
+
 	Weights *= VarCovar;
 	Weights *= Weights_T; //Normalement un scalaire
-	// std::cout<<"variance : "<<std::endl;
-	// Weights.Print();
+
 	variance_basket = Weights(0, 0);
-	// std::cout << "variance : " << variance_basket << std::endl;
-	//On peut commencer le pricing
-	//variance basket is sigma squared in the bs formula
+
 	double d1 = log(indexvalue / K);
-	// std::cout << "d1 : " << d1 << std::endl;
 	d1 += (rate + 0.5*variance_basket -0.5*squared_var / 2) * time;
-	// std::cout << "d1 : " << d1 << std::endl;
+
 	d1 /= sqrt(variance_basket * time);
-	// std::cout << "d1 : " << d1 << std::endl;
+
 	double d2 = d1 - sqrt(variance_basket * time);
-	// std::cout << "d2 : " << d2 << std::endl;
+
 	double N_d1 = normalCDF(d1);
 	double N_d2 = normalCDF(d2);
-	// std::cout << "N_d1 : " << N_d1 << std::endl;
-	// std::cout << "N_d2 : " << N_d2 << std::endl;
+
 	return (indexvalue * N_d1 - df * K * N_d2);
 };
 
@@ -134,7 +111,6 @@ double ClosedFormulaBasketCall::operator() (double I, const double& df)
 {
 
 	return std::max(I - K * df, 0.0);
-
 
 };
 

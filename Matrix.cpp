@@ -1,5 +1,14 @@
 #include "Matrix.hpp"
 #include <fstream>
+
+/* This file contains all methods used to manipulate matrix objects
+Matrix objects are used throughout the project to easily manipulate the vector of vector type
+Thus, we wrote methods for instance to multiply matrices, do the choleskly decomposition, transpose etc.
+*/
+
+
+//The description of all methods are available in the corresponding hpp file
+
 matrix::matrix(std::size_t nb_row, std::size_t nb_col)
 	: m_nb_rows(nb_row),
 	  m_nb_cols(nb_col),
@@ -50,21 +59,18 @@ void matrix::Resize(std::size_t nb_rows, std::size_t nb_cols)
 	{
 		m_data[i].resize(m_nb_cols,0.);
 	}
-	// m_data.resize(m_nb_rows,std::vector<double>(m_nb_cols));
 }
 void matrix::Diagonalization()
 {
 	Resize(m_nb_rows,m_nb_rows);
 	
-	// std::cout << m_data.size() << std::endl;
-	// std::cout << m_data[0].size() << std::endl;
 	for(size_t i = 0; i<m_nb_rows;++i)
 	{
 		double val = m_data[i][0];
-		// std::cout <<i << std::endl;
+
 		for(size_t j = 0; j<m_nb_rows;++j)
 		{
-			// std::cout <<j << std::endl;
+
 			
 			if(i==j)
 			{
@@ -143,9 +149,9 @@ matrix& matrix::operator*=(const matrix& rhs)
 {
 	
 	std::size_t nb_rows = m_nb_rows;
-	// std::cout << nb_rows<< std::endl;
+
 	std::size_t nb_cols = rhs.m_nb_cols;
-	// std::cout << nb_cols << std::endl;
+
 	matrix tmp(m_nb_rows,nb_cols);
 
 	for(std::size_t i = 0; i < m_nb_rows; ++i)
@@ -160,7 +166,6 @@ matrix& matrix::operator*=(const matrix& rhs)
 	
 	}
 	
-	// m_data.resize(nb_rows,std::vector<double>(nb_cols));
 	m_data.resize(m_nb_rows);
 	for(size_t i = 0; i<m_nb_rows;++i)
 	{
@@ -172,7 +177,7 @@ matrix& matrix::operator*=(const matrix& rhs)
 
 matrix& matrix::operator*=(const double& val)
 {
-	//element wise multiplication
+	//element wise multiplication by a scalar
 	matrix tmp(m_nb_rows, m_nb_cols);
 	for (std::size_t r = 0; r < m_nb_rows; ++r)
 	{
@@ -287,14 +292,10 @@ matrix matrix::area(size_t end_r, size_t end_c, std::vector<size_t> opt_start)
 
 };
 
-
-
 void matrix::CSV(std::string filename)
 {
 	std::ofstream out;
-	// myFile.open(filename);
 	out.open(filename);
-	// ofstream out("file.csv");
 
 	for (int i = 0; i < m_nb_rows; ++i)
 	{
@@ -322,7 +323,7 @@ matrix operator*(matrix a, matrix b)
 			for(std::size_t j = 0; j < b.nb_rows(); ++j)
 			{
 				tmp(i,c) += a(i,j)*b(j,c);
-			}//a.m_data[i][j]*b.m_data[j][c];
+			}
 		}
 	
 	}
@@ -386,10 +387,6 @@ matrix getCofactor(matrix mat, int p, int q, size_t n)
         } 
     } 
 
-	//std::cout << "cofactor matrix is " << std::endl;
-
-	//temp.Print();
-
 	return temp;
 } 
 
@@ -400,7 +397,6 @@ double determinantOfMatrix(matrix mat, size_t n)
     // Base case : if matrix contains single element 
 	if (n == 1) {
 		D =  mat(0, 0);
-		//std::cout << "mat 0 0 = " << mat(0, 0) << std::endl;
 	}
 	else {
 
@@ -418,7 +414,6 @@ double determinantOfMatrix(matrix mat, size_t n)
 			// terms are to be added with alternate sign 
 			sign = -sign;
 		}
-		//std::cout << "Determinant equals; " << D << std::endl;
 	}
 	return D;
 	
