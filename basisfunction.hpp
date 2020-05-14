@@ -25,11 +25,20 @@ public:
 	Poly_Laguerre() {};
 	~Poly_Laguerre() {};
 	Poly_Laguerre(int order);
-	int factorial(int n);
 	double operator()(double& value);
 	matrix operator()(matrix& InputMat);
+};
 
-//protected:
+
+class Poly_Hermite : public basis_functions
+{
+
+public:
+	Poly_Hermite() {};
+	~Poly_Hermite() {};
+	Poly_Hermite(int order);
+	double operator()(double& value);
+	matrix operator()(matrix& InputMat);
 
 };
 
@@ -44,3 +53,17 @@ public:
 	matrix operator()(matrix& InputMat);
 
 };
+
+class polynome_simple : public basis_functions
+{
+
+public:
+	polynome_simple() {};
+	~polynome_simple() {};
+	polynome_simple(int order);
+	double operator()(double& value);
+	matrix operator()(matrix& InputMat);
+
+};
+
+int factorial(int n);

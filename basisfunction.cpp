@@ -21,12 +21,52 @@ double Poly_Laguerre::operator() (double& value)
 		
 	};
 
-	//Ln /= factorial(base_order);
-
 	return Ln;
 };
 
-int Poly_Laguerre::factorial(int n) 
+
+Poly_Hermite::Poly_Hermite(int order) :
+	basis_functions(order)
+{};
+
+
+double Poly_Hermite::operator() (double& value)
+{
+
+	int intpart = base_order/2;
+
+	double Hn = 0.;
+	for (int k = 0; k < intpart +1; k++)
+
+	{
+		unsigned __int64 facto = (unsigned __int64) factorial(k) * factorial(base_order - 2 * k);
+		Hn += std::pow(-1., k) * std::pow(2.*value, base_order- 2*k) /facto;
+
+	}
+
+	Hn = Hn * factorial(base_order);
+
+	return Hn;
+};
+
+matrix Poly_Hermite::operator() (matrix& InputMat)
+{
+
+	matrix Res(InputMat.nb_rows(), 1);
+
+
+	for (size_t r = 0; r < InputMat.nb_rows(); r++)
+	{
+
+		Res(r, 0) = operator()(InputMat(r, 0));
+	}
+
+	return Res;
+
+};
+
+
+int factorial(int n) 
 {
 	if (n == 0)
 		return 1;
@@ -42,7 +82,6 @@ matrix Poly_Laguerre::operator() (matrix& InputMat)
 		for (size_t r = 0; r < InputMat.nb_rows(); r++)
 		{
 			Res(r, 0) = operator()(InputMat(r, 0)); //
-			//std::cout << Res(r, 0) << std::endl;
 		}
 	
 		return Res;
@@ -55,7 +94,6 @@ Laguerre_test::Laguerre_test(int order) :
 
 double Laguerre_test::operator() (double& value)
 {
-	//std::cout << base_order << std::endl;
 	double L = 0.;
 	switch (base_order) {
 	case 0: return 1.;
@@ -65,7 +103,6 @@ double Laguerre_test::operator() (double& value)
 	default: return -10000000000000.;
 	};
 	std::cout << L << std::endl;
-	//return L;
 };
 
 matrix Laguerre_test::operator() (matrix& InputMat)
@@ -77,8 +114,32 @@ matrix Laguerre_test::operator() (matrix& InputMat)
 	for (size_t r = 0; r < InputMat.nb_rows(); r++)
 	{
 
-		Res(r, 0) = operator()(InputMat(r, 0)); //
-		//std::cout << Res(r, 0) << std::endl;
+		Res(r, 0) = operator()(InputMat(r, 0)); 
+	}
+
+	return Res;
+
+};
+
+polynome_simple::polynome_simple(int order) :
+	basis_functions(order)
+{};
+
+double polynome_simple::operator()(double& value) 
+{   
+	return std::pow(value, base_order);
+};
+
+matrix polynome_simple::operator() (matrix& InputMat)
+{
+
+	matrix Res(InputMat.nb_rows(), 1);
+
+
+	for (size_t r = 0; r < InputMat.nb_rows(); r++)
+	{
+
+		Res(r, 0) = operator()(InputMat(r, 0)); 
 	}
 
 	return Res;
