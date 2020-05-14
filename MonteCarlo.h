@@ -68,9 +68,7 @@ class EuropeanBasket_controlvariable : public MonteCarloEuropean
 		void Simulate(double start, double end, size_t steps);
 
 	protected:
-		//Additional variable needed for the control variate
 		PayOffBasket* CPayoff;
-		//And variable needed to store the closed formula price of the control variate
 		double ExpPriceClsForm;
 
 };
@@ -124,7 +122,7 @@ public:
 
 protected:
 	std::vector<basis_functions*> Phi;
-	std::vector<int> early_exec;
+	std::vector<size_t> stopping_time;
 
 };
 

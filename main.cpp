@@ -110,8 +110,7 @@ int main(int argc, char* argv[])
 	MC.Simulate(startTime,endTime,nbsteps);
 	clock::time_point endComp = clock::now();	
 	clock::duration execution_timeComp = endComp - startComp;
-	
-	
+
 	MC.OptimalNbSimul(tolerated_error);
 	
 	size_t Optimal_Nb_Simulation = MC.GetNbSimul();
@@ -240,6 +239,14 @@ int main(int argc, char* argv[])
 	clock::time_point endComp = clock::now();
 	clock::duration execution_timeComp = endComp - startComp;
 	
+	//dynamics.Simulate(startTime, endTime, nbsteps);
+	//matrix chemin = dynamics.GetAllPaths();
+	//chemin.Print();
+
+	UniformGenerator* ugen2 = new EcuyerCombined();
+	RandomGenerator* ngen2 = new NormalBoxMuller(ugen2, 0., 1.);
+	// RandomProcess* chemin = new BSEuler1D(ngen2, spot, rate, vol);
+/*
 	
 	MC.OptimalNbSimul(tolerated_error);
 	
