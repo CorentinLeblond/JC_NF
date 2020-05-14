@@ -118,6 +118,7 @@ public:
 	//virtual void Simulate(double start, double end, size_t steps) = 0;
 	matrix GetEarlyExec();
 	matrix C_Hat_regression(matrix Index_time_t, matrix value);
+	matrix Final_Discounting(matrix simulated_price, std::vector<size_t> optimal_stopping_time, double dt, double rate);
 	//, std::vector<basis_functions*> polynomial
 
 protected:
@@ -155,6 +156,7 @@ protected:
 	PayOffBasket* CPayoff;
 	matrix simulated_price_CP;
 	double ExpPriceClsForm;
+	std::vector<size_t> stopping_time_CP;
 
 
 };
@@ -174,6 +176,7 @@ protected:
 	RandomProcess* x_diffusion;
 	 matrix simulated_price_anti;
 	 matrix average_price;
+	 std::vector<size_t> stopping_time_anti;
 
 };
 
@@ -196,6 +199,11 @@ protected:
 	matrix simulated_price_CP_anti;
 	matrix average_price;
 	double ExpPriceClsForm;
+	std::vector<size_t> stopping_time_anti;
+	std::vector<size_t> stopping_time_anti_CP;
+	std::vector<size_t> stopping_time_CP;
+
+
 
 };
 
@@ -247,6 +255,7 @@ protected:
 	double ExpPriceClsForm;
 	PayOffBasket* CPayoff;
 	matrix simulated_price_CP;
+	std::vector<size_t> stopping_time_CP;
 
 };
 
@@ -266,6 +275,7 @@ protected:
 	RandomProcess* x_diffusion;
 	matrix simulated_price_anti;
 	matrix average_price;
+	std::vector<size_t> stopping_time_anti;
 
 
 };
@@ -289,6 +299,8 @@ protected:
 	matrix simulated_price_CP_anti;
 	matrix average_price;
 	double ExpPriceClsForm;
-
+	std::vector<size_t> stopping_time_CP;
+	std::vector<size_t> stopping_time_anti;
+	std::vector<size_t> stopping_time_CP_anti;
 
 };

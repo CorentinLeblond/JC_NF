@@ -281,7 +281,12 @@ void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSt
 	for (size_t t = 0; t < nbSteps; ++t)
 	{
 		matrix X = m_gaussian->CorrelatedGaussianVector();
-		matrix XAntithetic = X*(-1);
+		matrix XAntithetic =X;
+
+		for (size_t i = 0; i < X.nb_rows(); i++) 
+		{
+			XAntithetic(i, 0) = -X(i, 0);
+		}
 		
 		for (size_t i = 0; i < assets; ++i)
 		{
