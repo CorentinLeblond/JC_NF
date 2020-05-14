@@ -43,9 +43,14 @@ MonteCarloEuropean::MonteCarloEuropean(size_t nbSimu, PayOffBasket* inputPayoff,
 	m_diffusion = diffusion;
 	MC_price = 0;
 	MC_variance = 0.;
+	simulated_price.Resize(nbSimu,1);
 };
 
+//Single asset Vanilla European Options
+////////////////////////////////////////////////////////
 //European Basket Options
+/////////////////////////////////////////////////////////////
+
 EuropeanBasket::EuropeanBasket(size_t nbSimu, PayOffBasket* inputPayoff, RandomProcess* diffusion):
 	MonteCarloEuropean(nbSimu,inputPayoff,diffusion)
 {
@@ -104,6 +109,7 @@ void EuropeanBasket_controlvariable::Simulate(double start, double end, size_t s
 	
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
+	
 		m_diffusion->Simulate(start, end, steps);
 		
 		matrix paths = m_diffusion->GetAllPaths();
@@ -112,6 +118,7 @@ void EuropeanBasket_controlvariable::Simulate(double start, double end, size_t s
 
 		for (size_t i = 0; i < paths.nb_rows(); i++)
 		{
+
 			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
 			//get the vector at maturity 
 		}
@@ -167,7 +174,7 @@ void EuropeanBasket_Antithetic::Simulate(double start, double end, size_t steps)
 		matrix maturity_spot(paths.nb_rows(), 1);
 
 		for (size_t i = 0; i < paths.nb_rows(); i++) 
-		{
+		{			//std::cout << paths(i, paths.nb_col:endl;
 			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
 			//get the vector at maturity 
 		}
@@ -234,7 +241,7 @@ void EuropeanBasket_Antithetic_CV::Simulate(double start, double end, size_t ste
 
 		for (size_t i = 0; i < paths.nb_rows(); i++) 
 		{
-			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
+			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);			
 			//get the vector at maturity 
 		}
 
@@ -326,6 +333,21 @@ matrix AmericanMonteCarlo::C_Hat_regression(matrix Index_time_t, matrix Value)
 
 };
 
+
+matrix AmericanMonteCarlo::GetEarlyExec()
+{
+	matrix res(stopping_time.size(), 1);
+
+	for (size_t j = 0; j < stopping_time.size(); j++)
+	{
+		res(j, 0) = stopping_time[j];
+	};
+
+	return res;
+
+};
+
+
 AmericanMonteCarlo_basket::AmericanMonteCarlo_basket(size_t nbSimu, PayOffBasket* InputPayoff, RandomProcess* diffusion,
 	std::vector<basis_functions*> polynomial) :
 	AmericanMonteCarlo(nbSimu,InputPayoff,diffusion,polynomial)
@@ -350,18 +372,10 @@ void AmericanMonteCarlo_basket::Simulate(double start, double end, size_t steps)
 	matrix weights = Payoff->GetWeights();
 	matrix Index(m_Simulation, steps);
 	matrix ITM(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
-	matrix It(m_Simulation,1);
-	matrix Phit(m_Simulation, Phi.size());
-	matrix poly_order_n(m_Simulation, 1);
-	matrix Phit_T(Phi.size(),m_Simulation);
-	matrix SDP_Phi(Phi.size(),Phi.size());
-	matrix Phi_V(Phi.size(),1);
-	matrix inv_SDP_Phi(Phi.size(), Phi.size());
-	matrix Beta_hat(Phi.size(),1);
-	matrix C_hat(m_Simulation, 1);
+	matrix C_hat;
 	matrix chm(1,steps);
-	matrix V(m_Simulation, 1);
 	matrix paths;
+	
 	
 
 	for (size_t s = 0; s < m_Simulation; s++)
@@ -377,91 +391,93 @@ void AmericanMonteCarlo_basket::Simulate(double start, double end, size_t steps)
 		
 		}
 		
-		simulated_price(s, 0) = Payoff->operator()(Index(s,Index.nb_cols()-1));
+		simulated_price(s, 0) = Payoff->operator()(Index(s,Index.nb_cols()-1)); //exp(-r*(end-start))*
 		//populate the vector at maturity of the payoff
 
 	}
 
-	double df = exp(-r * m_diffusion->Get_Dt());
+	stopping_time.assign(m_Simulation, steps); // initialization of the stopping time at maturity for all paths
 
+	double dt_sde = m_diffusion->Get_Dt();
+	double df = exp(-r*dt_sde);
 	// Regression part 
-	for(size_t t = steps - 2; t>0; t--) 
+	for (size_t t = steps - 2; t > 0; t--)
 	{
-	
-		
+		std::vector<double> It;
+		std::vector<double> V;
+		std::vector<size_t> is_ITM;
+
+
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
-			V(i, 0) = df * simulated_price(i, 0);
-			It(i, 0) = Index(i, t); //take index at t-1;
+			
 
-			if (Payoff->operator()(It(i,0)) > 0)
-			{ ITM(i, 0) = 1;  }
+			if (Payoff->operator()(Index(i, t)) > 0)
+			{
+				ITM(i, 0) = 1;
+				It.push_back(Index(i, t)); //start as a vector where each time we add only the rows that are ITM
+				V.push_back(df * simulated_price(i, 0));
+				//V.push_back(df * Payoff->operator()(Index(i,t)));
+				is_ITM.push_back(i);
+			}
 			else { ITM(i, 0) = -1; };
 		}
 
-		for (size_t b = 0; b < Phi.size(); b++) 
-		
-		{	
-			poly_order_n = Phi[b]->operator()(It);
-
-			for (size_t i = 0; i < poly_order_n.nb_rows(); i++)
-			{
-				Phit(i, b) = poly_order_n(i,0);
-			}
-			
-
+		if (It.size() == 0) {
+			std::cout << "Warning 0 paths ITM" << std::endl;
+			goto increment;
 		}
-
-		Phit_T = transpose(Phit);
-
-		SDP_Phi = Phit_T * Phit;
-
-		Phi_V = Phit_T * V;
-
-		inv_SDP_Phi = Inverse(SDP_Phi,SDP_Phi.nb_cols());
-
-		Beta_hat = inv_SDP_Phi * Phi_V;
-
-		C_hat = Phit * Beta_hat;
-
-		for (size_t i = 0; i < C_hat.nb_rows(); i++) 
 		{
-		
-			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
+		matrix It_mat(It, It.size()); //by construction this will be a column vector
+		matrix V_mat(V, V.size());	//by construction this will be a column vector
+
+		C_hat = C_Hat_regression(It_mat, V_mat);
+
+		size_t c = 0;
+
+		for (size_t i = 0; i < ITM.nb_rows(); i++)
+		{
+
+			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
 			{
-				simulated_price(i,0) = Payoff->operator()(Index(i, t));
-				//early_exec.push_back(i);
+
+				simulated_price(i, 0) = df * Payoff->operator()(Index(is_ITM[c], t)); //exp(-r*(t-start)*dt_sde)*
+				stopping_time[i] = t;
+				c += 1;
+				//std::cout << simulated_price(i, 0) << std::endl;
 			}
-			
+
+		
+
 			{
-			
-			
-				simulated_price(i, 0) = df * simulated_price(i, 0);
+				simulated_price(i, 0) =df* simulated_price(i, 0);
+				stopping_time[i] = stopping_time[i];
 			}
-		
-		
+
+			//std::cout << stopping_time[i] << std::endl;
 		}
+
+		It_mat.Clear();
+		V_mat.Clear();
+		It.clear();
+		V.clear();
+		is_ITM.clear();
+		//std::cout << simulated_price.mean() << std::endl;
+	}
+	increment:
+		for (size_t i = 0; i < ITM.nb_rows(); i++)
+		{
+			simulated_price(i, 0) = df * simulated_price(i, 0);
+		}
+
 	}
 
-	MC_price = df* simulated_price.mean();
+
+
+	MC_price = simulated_price.mean();
 
 	MC_variance = simulated_price.variance();
-
-};
-
-matrix AmericanMonteCarlo::GetEarlyExec() 
-{
-	matrix res(early_exec.size(), 1);
-
-	for (size_t i = 0; i < early_exec.size(); i++)
-	{
-
-		res(i, 0) = early_exec[i];
-
-	};
-
-	return res;
 
 };
 
@@ -488,33 +504,15 @@ void AmericanMonteCarlo_basket_controlevariable::Simulate(double start, double e
 	matrix weights = Payoff->GetWeights();
 	matrix Index(m_Simulation, steps);
 	matrix ITM(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
-	matrix It(m_Simulation, 1);
-	matrix Phit(m_Simulation, Phi.size());
-	matrix poly_order_n(m_Simulation, 1);
-	matrix Phit_T(Phi.size(), m_Simulation);
-	matrix SDP_Phi(Phi.size(), Phi.size());
-	matrix Phi_V(Phi.size(), 1);
-	matrix inv_SDP_Phi(Phi.size(), Phi.size());
-	matrix Beta_hat(Phi.size(), 1);
-	matrix C_hat(m_Simulation, 1);
+	matrix C_hat;
 	matrix chm(1, steps);
-	matrix V(m_Simulation, 1);
 	matrix paths;
 
 
 	matrix log_Index(m_Simulation, steps);
 	matrix ITM2(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
-	matrix It2(m_Simulation, 1);
-	matrix Phit_2(m_Simulation, Phi.size());
-	matrix poly_order_n_2(m_Simulation, 1);
-	matrix Phit_T_2(Phi.size(), m_Simulation);
-	matrix SDP_Phi_2(Phi.size(), Phi.size());
-	matrix Phi_V_2(Phi.size(), 1);
-	matrix inv_SDP_Phi_2(Phi.size(), Phi.size());
-	matrix Beta_hat_2(Phi.size(), 1);
-	matrix C_hat_2(m_Simulation, 1);
+	matrix C_hat_2;
 	matrix chm_2(1, steps);
-	matrix V_2(m_Simulation, 1);
 	matrix log_spot;
 
 	matrix CV(m_Simulation, 1);
@@ -547,106 +545,118 @@ void AmericanMonteCarlo_basket_controlevariable::Simulate(double start, double e
 
 	}
 
+	stopping_time.assign(m_Simulation, steps); // initialization of the stopping time at maturity for all paths
+
 	double df = exp(-r * m_diffusion->Get_Dt());
 	// Regression part 
 
 	for (size_t t = steps - 2; t > 0; t--)
 	{
+
+		std::vector<double> V;
+		std::vector<double> V_2;
+		std::vector<size_t> is_ITM_2;
+		std::vector<size_t> is_ITM;
+		std::vector<double> It;
+		std::vector<double> It_2;
+
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
-			V(i, 0) = df * simulated_price(i, 0);
-			V_2(i, 0) = df * simulated_price_CP(i, 0);
-			It(i, 0) = Index(i, t); //take index at t-1;
-			It2(i, 0) = log_Index(i, t);
-			if (Payoff->operator()(It(i, 0)) > 0)
+			if (Payoff->operator()(Index(i, t)) > 0)
 			{
 				ITM(i, 0) = 1;
+				It.push_back(Index(i, t));
+				V.push_back(df * simulated_price(i, 0));
+				//V.push_back(df * Payoff->operator()(Index(i, t)));
+				is_ITM.push_back(i);
 			}
 			else { ITM(i, 0) = -1; };
 
-			if (CPayoff->operator()(It2(i, 0)) > 0)
+			if (CPayoff->operator()(log_Index(i, t)) > 0)
 			{
 				ITM2(i, 0) = 1;
+				It_2.push_back(log_Index(i, t));
+				V_2.push_back(df * simulated_price_CP(i, 0));
+				//V_2.push_back(df * CPayoff->operator()(log_Index(i, t)));
+				is_ITM_2.push_back(i);
 			}
 			else { ITM2(i, 0) = -1; };
-
-
-
 		}
 
-		for (size_t b = 0; b < Phi.size(); b++)
+		if ((It.size() == 0)&&(It_2.size()==0))
+		{
+			std::cout << "Warning 0 paths ITM" << std::endl;
+			goto  increment;
+		}
+
 
 		{
-			poly_order_n = Phi[b]->operator()(It);
-			poly_order_n_2 = Phi[b]->operator()(It2);
-
-			for (size_t i = 0; i < poly_order_n.nb_rows(); i++)
+			matrix It_mat(It, It.size());
+			matrix V_mat(V, V.size());
+			matrix It_2_mat(It_2, It_2.size());
+			matrix V_2_mat(V_2, V_2.size());
+			C_hat = C_Hat_regression(It_mat, V_mat);
+			C_hat_2 = C_Hat_regression(It_2_mat, V_2_mat);
+			size_t c = 0;
+			size_t c2 = 0;
+			for (size_t i = 0; i < ITM.nb_rows(); i++)
 			{
-				Phit(i, b) = poly_order_n(i, 0);
-				Phit_2(i, b) = poly_order_n_2(i, 0);
+
+				if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
+				{
+					simulated_price(i, 0) = df * Payoff->operator()(Index(is_ITM[c], t));
+					stopping_time[i] = t;
+					c += 1;
+				}
+
+				{
+					simulated_price(i, 0) = df*simulated_price(i, 0);
+					stopping_time[i] = stopping_time[i];
+				}
+
+				if ((ITM2(i, 0) == 1) && (CPayoff->operator()(log_Index(is_ITM_2[c2], t)) > C_hat_2(c2, 0)))
+				{
+					simulated_price_CP(i, 0) = df * CPayoff->operator()(log_Index(is_ITM_2[c2], t));
+					c2 += 1;
+				}
+
+				{
+
+					simulated_price_CP(i, 0) = df*simulated_price_CP(i, 0);
+				}
+
+				CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
+
 			}
 
+			It_mat.Clear();
+			V_mat.Clear();
+			It.clear();
+			V.clear();
+			is_ITM.clear();
 
+			It_2_mat.Clear();
+			V_2_mat.Clear();
+			It_2.clear();
+			V_2.clear();
+			is_ITM_2.clear();
 		}
-
-		Phit_T = transpose(Phit);
-		Phit_T_2 = transpose(Phit_2);
-
-		SDP_Phi = Phit_T * Phit;
-		SDP_Phi_2 = Phit_T_2 * Phit_2;
-
-		Phi_V = Phit_T * V;
-		Phi_V_2 = Phit_T_2 * V_2;
-
-		inv_SDP_Phi = Inverse(SDP_Phi, SDP_Phi.nb_cols());
-		inv_SDP_Phi_2 = Inverse(SDP_Phi_2, SDP_Phi_2.nb_cols());
-
-		Beta_hat = inv_SDP_Phi * Phi_V;
-		Beta_hat_2 = inv_SDP_Phi_2 * Phi_V_2;
-
-
-		C_hat = Phit * Beta_hat;
-		C_hat_2 = Phit_2 * Beta_hat_2;
-
-		for (size_t i = 0; i < C_hat.nb_rows(); i++)
-		{
-
-			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
-			{
-				simulated_price(i, 0) = Payoff->operator()(Index(i, t));
-			}
-
-			{
-
-
-				simulated_price(i, 0) = df * simulated_price(i, 0);
-			}
-
-
-
-
-			if ((ITM2(i, 0) == 1) && (CPayoff->operator()(log_Index(i, t)) > C_hat_2(i, 0)))
-			{
-				simulated_price_CP(i, 0) = CPayoff->operator()(log_Index(i, t));
-			}
-
-			{
-
-
-				simulated_price_CP(i, 0) = df * simulated_price_CP(i, 0);
-			}
-
-			CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;;
-
-
+	increment:
+		for (size_t i = 0; i < ITM.nb_rows(); i++)
+		{ 
+			simulated_price(i, 0) = df * simulated_price(i, 0); 
+			simulated_price_CP(i, 0) = df * simulated_price_CP(i, 0);
+			CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
 		}
-	} 
+	}
 
-
-	MC_price = df* CV.mean();
+	MC_price = CV.mean();
 
 	MC_variance = CV.variance();
+
+
+
 
 };
 
@@ -668,10 +678,6 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 
 	std::cout << "American MC with antithetic" << std::endl;
 
-	//simulated_price.Clear();
-	//simulated_price_anti.Clear();
-	//average_price.Clear();
-
 	simulated_price.Resize(m_Simulation/2, 1);
 	simulated_price_anti.Resize(m_Simulation/2, 1);
 	average_price.Resize(m_Simulation/2, 1);
@@ -679,17 +685,8 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 	matrix weights = Payoff->GetWeights();
 	matrix Index(m_Simulation/2, steps);
 	matrix ITM(m_Simulation/2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It(m_Simulation/2, 1);
-	matrix Phit(m_Simulation/2, Phi.size());
-	matrix poly_order_n(m_Simulation/2, 1);
-	matrix Phit_T(Phi.size(), m_Simulation/2);
-	matrix SDP_Phi(Phi.size(), Phi.size());
-	matrix Phi_V(Phi.size(), 1);
-	matrix inv_SDP_Phi(Phi.size(), Phi.size());
-	matrix Beta_hat(Phi.size(), 1);
-	matrix C_hat(m_Simulation/2, 1);
+	matrix C_hat;
 	matrix chm(1, steps);
-	matrix V(m_Simulation/2, 1);
 	matrix paths;
 	matrix paths_anti;
 
@@ -697,18 +694,8 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 	matrix chm_anti(1, steps);
 	matrix Index_anti(m_Simulation/2, steps);
 	matrix ITM_anti(m_Simulation/2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It_anti(m_Simulation/2, 1);
-	matrix Phit_anti(m_Simulation/2, Phi.size());
-	matrix poly_order_n_anti(m_Simulation/2, 1);
-	matrix Phit_T_anti(Phi.size(), m_Simulation/2);
-	matrix SDP_Phi_anti(Phi.size(), Phi.size());
-	matrix Phi_V_anti(Phi.size(), 1);
-	matrix inv_SDP_Phi_anti(Phi.size(), Phi.size());
-	matrix Beta_hat_anti(Phi.size(), 1);
-	matrix C_hat_anti(m_Simulation/2, 1);
-	matrix V_anti(m_Simulation / 2, 1);
+	matrix C_hat_anti;
 
-	size_t k = 0;
 	size_t k_a = 0;
 
 	for (size_t s = 0; s < m_Simulation; s++)
@@ -717,8 +704,8 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 		//std::cout << "simulation " << s << std::endl;
 		if (s % 2 == 0)
 		{
-			x_diffusion->Simulate(start, end, steps);
-			paths = x_diffusion->GetAllPaths();
+		m_diffusion->Simulate(start, end, steps);
+			paths = m_diffusion->GetAllPaths();
 			chm = weights * paths;
 
 			for (size_t i = 0; i < steps; i++)
@@ -729,14 +716,13 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 
 			simulated_price(k_a, 0) = Payoff->operator()(Index(k_a, Index.nb_cols() - 1));
 
-			//k += 1;
 
 			
 
 		}
 		else
 		{
-			paths_anti = x_diffusion->GetAllPathsAnti();
+			paths_anti = m_diffusion->GetAllPathsAnti();
 			chm_anti = weights * paths_anti;
 
 
@@ -753,100 +739,116 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 		}
 	}
 
+	stopping_time.assign(m_Simulation, steps); // initialization of the stopping time at maturity for all paths
 	double df = exp(-r * x_diffusion->Get_Dt());
 	// Regression part 
 
 	for (size_t t = steps - 2; t > 0; t--)
 	{
 
-		//std::cout << "regression " << t << std::endl;
+		std::vector<double> V;
+		std::vector<double> V_anti;
+		std::vector<size_t> is_ITM_anti;
+		std::vector<size_t> is_ITM;
+		std::vector<double> It;
+		std::vector<double> It_anti;
+
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
-			V(i, 0) = df * simulated_price(i, 0);
-			It(i, 0) = Index(i, t); //take index at t-1;
+	
 
-			if (Payoff->operator()(It(i, 0)) > 0)
+			if (Payoff->operator()(Index(i, t)) > 0)
 			{
 				ITM(i, 0) = 1;
+				V.push_back(df * simulated_price(i, 0));
+				//V.push_back(df * Payoff->operator()(Index(i, t)));
+				It.push_back(Index(i, t));
+				is_ITM.push_back(i);
+
 			}
 			else { ITM(i, 0) = -1; };
 
-			V_anti(i, 0) = df * simulated_price_anti(i, 0);
-			It_anti(i, 0) = Index_anti(i, t); //take index at t-1;
-
-			if (Payoff->operator()(It_anti(i, 0)) > 0)
+			if (Payoff->operator()(Index_anti(i, t)) > 0)
 			{
 				ITM_anti(i, 0) = 1;
+				V_anti.push_back(df * simulated_price_anti(i, 0));
+				//V_anti.push_back(df * Payoff->operator()(Index_anti(i, t)));
+				It_anti.push_back(Index_anti(i, t));
+				is_ITM_anti.push_back(i);
 			}
 			else { ITM_anti(i, 0) = -1; };
 		}
 
-		for (size_t b = 0; b < Phi.size(); b++)
-
+		if ((It.size() == 0)&& (It_anti.size() == 0))
 		{
-			poly_order_n = Phi[b]->operator()(It);
-			poly_order_n_anti = Phi[b]->operator()(It_anti);
-
-			for (size_t i = 0; i < poly_order_n.nb_rows(); i++)
-			{
-				Phit(i, b) = poly_order_n(i, 0);
-
-				Phit_anti(i, b) = poly_order_n_anti(i, 0);
-			}
-
-
+			std::cout << "Warning 0 paths ITM" << std::endl;
+			goto  increment;
 		}
 
-		Phit_T = transpose(Phit);
-		Phit_T_anti = transpose(Phit_anti);
-
-		SDP_Phi = Phit_T * Phit;
-
-		SDP_Phi_anti = Phit_T_anti * Phit_anti;
-
-		Phi_V = Phit_T * V;
-		Phi_V_anti = Phit_T_anti * V_anti;
-
-		inv_SDP_Phi = Inverse(SDP_Phi, SDP_Phi.nb_cols());
-		inv_SDP_Phi_anti = Inverse(SDP_Phi_anti, SDP_Phi_anti.nb_cols());
-
-		Beta_hat = inv_SDP_Phi * Phi_V;
-		Beta_hat_anti = inv_SDP_Phi_anti * Phi_V_anti;
-
-		C_hat = Phit * Beta_hat;
-		C_hat_anti = Phit_anti * Beta_hat_anti;
-
-		for (size_t i = 0; i < C_hat.nb_rows(); i++)
 		{
+			matrix It_mat(It, It.size());
+			matrix It_mat_anti(It_anti, It_anti.size());
 
-			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
+			matrix V_mat(V, V.size());
+			matrix V_mat_anti(V_anti, V_anti.size());
+
+			C_hat = C_Hat_regression(It_mat, V_mat);
+			C_hat_anti = C_Hat_regression(It_mat_anti, V_mat_anti);
+
+			size_t c = 0;
+			size_t ca = 0;
+
+			for (size_t i = 0; i < ITM.nb_rows(); i++)
 			{
-				simulated_price(i, 0) = Payoff->operator()(Index(i, t));
-				//early_exec.push_back(i);
+				if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
+				{
+					simulated_price(i, 0) = df * Payoff->operator()(Index(is_ITM[c], t));
+					stopping_time[i] = t;
+					c += 1;
+				}
+
+				{
+					simulated_price(i, 0) = df*simulated_price(i, 0);
+				}
+
+		
+
+				if ((ITM_anti(i, 0) == 1) && (Payoff->operator()(Index_anti(is_ITM_anti[ca], t)) > C_hat_anti(ca, 0)))
+				{
+					simulated_price_anti(i, 0) = Payoff->operator()(Index_anti(is_ITM_anti[ca], t));
+					stopping_time[i] = stopping_time[i];
+					ca += 1;
+				}
+
+				{
+					simulated_price_anti(i, 0) = df * simulated_price_anti(i, 0);
+				}
+
+				average_price(i, 0) = (simulated_price_anti(i, 0) + simulated_price(i, 0)) * 0.5;
 			}
 
-			{
-				simulated_price(i, 0) = df * simulated_price(i, 0);
-			}
+			It_mat.Clear();
+			V_mat.Clear();
+			It.clear();
+			V.clear();
+			is_ITM.clear();
 
-
-			if ((ITM_anti(i, 0) == 1) && (Payoff->operator()(Index_anti(i, t)) > C_hat_anti(i, 0)))
-			{
-				simulated_price_anti(i, 0) = Payoff->operator()(Index_anti(i, t));
-				//early_exec.push_back(i);
-			}
-
-			{
-
-				simulated_price_anti(i, 0) = df * simulated_price_anti(i, 0);
-			}
-
-			average_price(i, 0) = (simulated_price_anti(i,0) + simulated_price(i, 0)) * 0.5;
+			It_mat_anti.Clear();
+			V_mat_anti.Clear();
+			It_anti.clear();
+			V_anti.clear();
+			is_ITM_anti.clear();
+		}
+	increment:
+		for (size_t i = 0; i < ITM.nb_rows(); i++)
+		{
+			simulated_price(i, 0) = df * simulated_price(i, 0);
+			simulated_price_anti(i, 0) = df * simulated_price_anti(i, 0);
+			average_price(i, 0) = (simulated_price_anti(i, 0) + simulated_price(i, 0)) * 0.5;
 		}
 	}
-
-	MC_price = df*average_price.mean();
+	MC_price = average_price.mean();
 
 	MC_variance = average_price.variance();
 
@@ -885,17 +887,8 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 	matrix weights = Payoff->GetWeights();
 	matrix Index(m_Simulation / 2, steps);
 	matrix ITM(m_Simulation / 2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It(m_Simulation / 2, 1);
-	matrix Phit(m_Simulation / 2, Phi.size());
-	matrix poly_order_n(m_Simulation / 2, 1);
-	matrix Phit_T(Phi.size(), m_Simulation / 2);
-	matrix SDP_Phi(Phi.size(), Phi.size());
-	matrix Phi_V(Phi.size(), 1);
-	matrix inv_SDP_Phi(Phi.size(), Phi.size());
-	matrix Beta_hat(Phi.size(), 1);
-	matrix C_hat(m_Simulation / 2, 1);
+	matrix C_hat;
 	matrix chm(1, steps);
-	matrix V(m_Simulation / 2, 1);
 	matrix paths;
 	matrix paths_anti;
 
@@ -903,48 +896,21 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 	matrix chm_anti(1, steps);
 	matrix Index_anti(m_Simulation / 2, steps);
 	matrix ITM_anti(m_Simulation / 2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It_anti(m_Simulation / 2, 1);
-	matrix Phit_anti(m_Simulation / 2, Phi.size());
-	matrix poly_order_n_anti(m_Simulation / 2, 1);
-	matrix Phit_T_anti(Phi.size(), m_Simulation / 2);
-	matrix SDP_Phi_anti(Phi.size(), Phi.size());
-	matrix Phi_V_anti(Phi.size(), 1);
-	matrix inv_SDP_Phi_anti(Phi.size(), Phi.size());
-	matrix Beta_hat_anti(Phi.size(), 1);
-	matrix C_hat_anti(m_Simulation / 2, 1);
-	matrix V_anti(m_Simulation / 2, 1);
+	matrix C_hat_anti;
 
 
 
 	matrix log_Index(m_Simulation/2, steps);
 	matrix ITM2(m_Simulation/2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It2(m_Simulation/2, 1);
-	matrix Phit_2(m_Simulation/2, Phi.size());
-	matrix poly_order_n_2(m_Simulation/2, 1);
-	matrix Phit_T_2(Phi.size(), m_Simulation/2);
-	matrix SDP_Phi_2(Phi.size(), Phi.size());
-	matrix Phi_V_2(Phi.size(), 1);
-	matrix inv_SDP_Phi_2(Phi.size(), Phi.size());
-	matrix Beta_hat_2(Phi.size(), 1);
-	matrix C_hat_2(m_Simulation/2, 1);
+	matrix C_hat_2;
 	matrix chm_2(1, steps);
-	matrix V_2(m_Simulation/2, 1);
 	matrix log_spot;
 
 
 	matrix log_Index_anti(m_Simulation/2, steps);
 	matrix ITM2_anti(m_Simulation/2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It2_anti(m_Simulation/2, 1);
-	matrix Phit_2_anti(m_Simulation/2, Phi.size());
-	matrix poly_order_n_2_anti(m_Simulation/2, 1);
-	matrix Phit_T_2_anti(Phi.size(), m_Simulation/2);
-	matrix SDP_Phi_2_anti(Phi.size(), Phi.size());
-	matrix Phi_V_2_anti(Phi.size(), 1);
-	matrix inv_SDP_Phi_2_anti(Phi.size(), Phi.size());
-	matrix Beta_hat_2_anti(Phi.size(), 1);
-	matrix C_hat_2_anti(m_Simulation/2, 1);
+	matrix C_hat_2_anti;
 	matrix chm_2_anti(1, steps);
-	matrix V_2_anti(m_Simulation/2, 1);
 	matrix log_spot_anti;
 	size_t k = 0;
 	size_t k_a = 0;
@@ -955,8 +921,8 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 		//std::cout << "simulation " << s << std::endl;
 		if (s % 2 == 0)
 		{
-			x_diffusion->Simulate(start, end, steps);
-			paths = x_diffusion->GetAllPaths();
+			m_diffusion->Simulate(start, end, steps);
+			paths = m_diffusion->GetAllPaths();
 			log_spot = paths;
 			chm = weights * paths;
 
@@ -987,7 +953,7 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 		}
 		else
 		{
-			paths_anti = x_diffusion->GetAllPathsAnti();
+			paths_anti = m_diffusion->GetAllPathsAnti();
 			log_spot_anti = paths_anti;
 			chm_anti = weights * paths_anti;
 
@@ -1015,6 +981,8 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 			k_a += 1;
 		}
 	}
+
+	stopping_time.assign(m_Simulation, steps);
 	double df = exp(-r * x_diffusion->Get_Dt());
 
 	// Regression part 
@@ -1022,169 +990,202 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 	for (size_t t = steps - 2; t > 0; t--)
 	{
 
+		std::vector<double> V;
+		std::vector<double> V_anti;
+		std::vector<size_t> is_ITM_anti;
+		std::vector<size_t> is_ITM;
+		std::vector<double> It;
+		std::vector<double> It_anti;
+
+
+		std::vector<double> V_2;
+		std::vector<double> V_anti_2;
+		std::vector<size_t> is_ITM_anti_2;
+		std::vector<size_t> is_ITM_2;
+		std::vector<double> It_2;
+		std::vector<double> It_anti_2;
 
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
-			V(i, 0) = df * simulated_price(i, 0);
-			It(i, 0) = Index(i, t); //take index at t-1;
+			
 
-			V_2(i, 0) = df * simulated_price_CP(i, 0);
-			It2(i, 0) = log_Index(i, t); //take index at t-1;
-
-			V_anti(i, 0) = df * simulated_price_anti(i, 0);
-			It_anti(i, 0) = Index_anti(i, t); //take index at t-1;
-
-			V_2_anti(i, 0) = df * simulated_price_CP_anti(i, 0);
-			It2_anti(i, 0) = log_Index_anti(i, t); //take index at t-1;
-
-
-			if (Payoff->operator()(It(i, 0)) > 0)
+			if (Payoff->operator()(Index(i,t)) > 0)
 			{
 				ITM(i, 0) = 1;
+				V.push_back(df* simulated_price(i, 0));
+				//V.push_back(df * Payoff->operator()(Index(i, t)));
+				It.push_back(Index(i, t));
+				is_ITM.push_back(i);
 			}
 			else { ITM(i, 0) = -1; };
 
-			if (CPayoff->operator()(It2(i, 0)) > 0)
+			if (CPayoff->operator()(log_Index(i,t)) > 0)
 			{
 				ITM2(i, 0) = 1;
+				V_2.push_back(df* simulated_price_CP(i, 0));
+				//V_2.push_back(df* CPayoff->operator()(log_Index(i, t)));
+				It_2.push_back(log_Index(i, t));
+				is_ITM_2.push_back(i);
+
 			}
 			else { ITM2(i, 0) = -1; };
 
 
-			if (Payoff->operator()(It_anti(i, 0)) > 0)
+			if (Payoff->operator()(Index_anti(i,t)) > 0)
 			{
 				ITM_anti(i, 0) = 1;
+				V_anti.push_back(df* simulated_price_anti(i, 0));
+				//V_anti.push_back(df* Payoff->operator()(Index_anti(i, t)));
+				It_anti.push_back(Index_anti(i, t));
+				is_ITM_anti.push_back(i);
 			}
 			else { ITM_anti(i, 0) = -1; };
 
 
-			if (CPayoff->operator()(It2_anti(i, 0)) > 0)
+			if (CPayoff->operator()(log_Index_anti(i, t)) > 0)
 			{
 				ITM2_anti(i, 0) = 1;
+				V_anti_2.push_back(df* simulated_price_CP_anti(i, 0));
+				//V_anti_2.push_back(df* CPayoff->operator()(log_Index_anti(i, t)));
+				It_anti_2.push_back(log_Index_anti(i, t));
+				is_ITM_anti_2.push_back(i);
 			}
 			else { ITM2_anti(i, 0) = -1; };
 
 		}
 
-
-		for (size_t b = 0; b < Phi.size(); b++)
-
+		if ((It.size() == 0) && (It_anti.size() == 0)&& (It_2.size() == 0) && (It_anti_2.size() == 0))
 		{
-			poly_order_n = Phi[b]->operator()(It);
-			poly_order_n_anti = Phi[b]->operator()(It_anti);
-
-			poly_order_n_2 = Phi[b]->operator()(It2);
-			poly_order_n_2_anti = Phi[b]->operator()(It2_anti);
-
-			for (size_t i = 0; i < poly_order_n.nb_rows(); i++)
-			{
-				Phit(i, b) = poly_order_n(i, 0);
-
-				Phit_anti(i, b) = poly_order_n_anti(i, 0);
-
-
-				Phit_2(i, b) = poly_order_n_2(i, 0);
-
-				Phit_2_anti(i, b) = poly_order_n_2_anti(i, 0);
-			}
-
-
+			std::cout << "Warning 0 paths ITM" << std::endl;
+			goto  increment;
 		}
 
-		Phit_T = transpose(Phit);
-		Phit_T_anti = transpose(Phit_anti);
-		Phit_T_2 = transpose(Phit_2);
-		Phit_T_2_anti = transpose(Phit_2_anti);
-
-		SDP_Phi = Phit_T * Phit;
-		SDP_Phi_anti = Phit_T_anti * Phit_anti;
-		SDP_Phi_2 = Phit_T_2 * Phit_2;
-		SDP_Phi_2_anti = Phit_T_2_anti * Phit_2_anti;
-
-
-		Phi_V = Phit_T * V;
-		Phi_V_anti = Phit_T_anti * V_anti;
-		Phi_V_2 = Phit_T_2 * V_2;
-		Phi_V_2_anti = Phit_T_2_anti * V_2_anti;
-
-
-		inv_SDP_Phi = Inverse(SDP_Phi, SDP_Phi.nb_cols());
-		inv_SDP_Phi_anti = Inverse(SDP_Phi_anti, SDP_Phi_anti.nb_cols());
-		inv_SDP_Phi_2 = Inverse(SDP_Phi_2, SDP_Phi_2.nb_cols());
-		inv_SDP_Phi_2_anti = Inverse(SDP_Phi_2_anti, SDP_Phi_2_anti.nb_cols());
-
-
-		Beta_hat = inv_SDP_Phi * Phi_V;
-		Beta_hat_anti = inv_SDP_Phi_anti * Phi_V_anti;
-		Beta_hat_2 = inv_SDP_Phi_2 * Phi_V_2;
-		Beta_hat_2_anti = inv_SDP_Phi_2_anti * Phi_V_2_anti;
-
-		C_hat = Phit * Beta_hat;
-		C_hat_anti = Phit_anti * Beta_hat_anti;
-		C_hat_2 = Phit_2 * Beta_hat_2;
-		C_hat_2_anti = Phit_2_anti * Beta_hat_2_anti;
-
-		for (size_t i = 0; i < C_hat.nb_rows(); i++)
 		{
+			matrix It_mat(It, It.size());
+			matrix It_mat_anti(It_anti, It_anti.size());
 
-			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
+			matrix It2_mat(It_2, It_2.size());
+			matrix It2_mat_anti(It_anti_2, It_anti_2.size());
+
+			matrix V2_mat(V_2, V_2.size());
+			matrix V2_mat_anti(V_anti_2, V_anti_2.size());
+
+			matrix V_mat(V, V.size());
+			matrix V_mat_anti(V_anti, V_anti.size());
+
+			C_hat = C_Hat_regression(It_mat, V_mat);
+			C_hat_2 = C_Hat_regression(It2_mat, V2_mat);
+			C_hat_anti = C_Hat_regression(It_mat_anti, V_mat_anti);
+			C_hat_2_anti = C_Hat_regression(It2_mat_anti, V2_mat_anti);
+
+
+			size_t c = 0;
+			size_t c2 = 0;
+			size_t ca = 0;
+			size_t ca_2 = 0;
+
+			for (size_t i = 0; i < ITM.nb_rows(); i++)
 			{
-				simulated_price(i, 0) = Payoff->operator()(Index(i, t));
-				//early_exec.push_back(i);
+
+				if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
+				{
+					simulated_price(i, 0) = df * Payoff->operator()(Index(is_ITM[c], t));
+					stopping_time[i] = t;
+					c += 1;
+				}
+				else
+				{
+					simulated_price(i, 0) = df*simulated_price(i, 0);
+				}
+
+				if ((ITM2(i, 0) == 1) && (CPayoff->operator()(log_Index(is_ITM_2[c2], t)) > C_hat_2(c2, 0)))
+				{
+					simulated_price_CP(i, 0) =df* CPayoff->operator()(log_Index(is_ITM_2[c2], t));
+					c2 += 1;
+				}
+				else
+				{
+					simulated_price_CP(i, 0) = df*simulated_price_CP(i, 0);
+				}
+
+
+				if ((ITM_anti(i, 0) == 1) && (Payoff->operator()(Index_anti(is_ITM_anti[ca], t)) > C_hat_anti(ca, 0)))
+				{
+					simulated_price_anti(i, 0) =df* Payoff->operator()(Index_anti(is_ITM_anti[ca], t));
+					ca += 1;
+				}
+				else
+				{
+					simulated_price_anti(i, 0) = df*simulated_price_anti(i, 0);
+				}
+
+
+				if ((ITM2_anti(i, 0) == 1) && (CPayoff->operator()(log_Index_anti(is_ITM_anti_2[ca_2], t)) > C_hat_2_anti(ca_2, 0)))
+				{
+					simulated_price_CP_anti(i, 0) =df* CPayoff->operator()(log_Index_anti(is_ITM_anti_2[ca_2], t));
+					ca_2 += 1;
+
+				}
+				else
+				{
+					simulated_price_CP_anti(i, 0) = df*simulated_price_CP_anti(i, 0);
+				}
+
+				temp = simulated_price(i, 0) - simulated_price_CP(i, 0);
+				temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0);
+
+				average_price(i, 0) = (temp + temp_anti) * 0.5 + ExpPriceClsForm;
+
+				temp = 0.;
+				temp_anti = 0.;
 			}
-			else
-			{
 
-				simulated_price(i, 0) = df * simulated_price(i, 0);
-			}
+			It_mat.Clear();
+			V_mat.Clear();
+			It.clear();
+			V.clear();
+			is_ITM.clear();
 
-			if ((ITM2(i, 0) == 1) && (CPayoff->operator()(log_Index(i, t)) > C_hat_2(i, 0)))
-			{
-				simulated_price_CP(i, 0) = CPayoff->operator()(log_Index(i, t));
-				//early_exec.push_back(i);
-			}
-			else
-			{
+			It2_mat.Clear();
+			V2_mat.Clear();
+			It_anti.clear();
+			V_anti.clear();
+			is_ITM_anti.clear();
 
+			It_mat_anti.Clear();
+			V_mat_anti.Clear();
+			It_anti.clear();
+			V_anti.clear();
+			is_ITM_anti.clear();
+
+			It2_mat_anti.Clear();
+			V2_mat_anti.Clear();
+			It_anti_2.clear();
+			V_anti_2.clear();
+			is_ITM_anti_2.clear(); 
+		}
+		increment:
+			for (size_t i = 0; i < ITM.nb_rows(); i++) 
+			{
+				simulated_price(i, 0) = df * simulated_price(i,0);
 				simulated_price_CP(i, 0) = df * simulated_price_CP(i, 0);
+				simulated_price_CP_anti(i, 0) = df*simulated_price_CP_anti(i, 0);
+				simulated_price_anti(i, 0) = df*simulated_price_anti(i, 0);
+
+				temp = simulated_price(i, 0) - simulated_price_CP(i, 0);
+				temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0);
+
+				average_price(i, 0) = (temp + temp_anti) * 0.5 + ExpPriceClsForm;
+
+			
 			}
-
-
-			if ((ITM_anti(i, 0) == 1) && (Payoff->operator()(Index_anti(i, t)) > C_hat_anti(i, 0)))
-			{
-				simulated_price_anti(i, 0) = Payoff->operator()(Index_anti(i, t));
-				//early_exec.push_back(i);
-			}
-			else
-			{
-
-				simulated_price_anti(i, 0) = df * simulated_price_anti(i, 0);
-			}
-
-
-			if ((ITM2_anti(i, 0) == 1) && (CPayoff->operator()(log_Index_anti(i, t)) > C_hat_2_anti(i, 0)))
-			{
-				simulated_price_CP_anti(i, 0) = CPayoff->operator()(log_Index_anti(i, t));
-				//early_exec.push_back(i);
-			}
-			else
-			{
-
-				simulated_price_CP_anti(i, 0) = df * simulated_price_CP_anti(i, 0);
-			}
-
-			temp = simulated_price(i, 0) - simulated_price_CP(i,0);
-			temp_anti = simulated_price_anti(i,0) - simulated_price_CP_anti(i,0);
-
-			average_price(i, 0) = (temp + temp_anti) * 0.5 + ExpPriceClsForm;
-
-			temp = 0.;
-			temp_anti = 0;
-		}
 	}
 
-	MC_price = df*average_price.mean();
+
+
+
+	MC_price = average_price.mean();
 
 	MC_variance = average_price.variance();
 
@@ -1221,13 +1222,6 @@ Bermudean_BasketOption::Bermudean_BasketOption(size_t nbSimu, PayOffBasket* Inpu
 
 void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 {
-		//matrix Phit(m_Simulation, Phi.size());
-		//matrix poly_order_n(m_Simulation, 1);
-		//matrix Phit_T(Phi.size(), m_Simulation);
-		//matrix SDP_Phi(Phi.size(), Phi.size());
-		//matrix Phi_V(Phi.size(), 1);
-		//matrix inv_SDP_Phi(Phi.size(), Phi.size());
-		//matrix Beta_hat(Phi.size(), 1);
 
 
 	std::cout << "Bermudean BasketOption LS" << std::endl;
@@ -1236,10 +1230,8 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 	weights.Print();
 	matrix Index(m_Simulation, exec_schedule.nb_rows());
 	matrix ITM(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
-	matrix It(m_Simulation, 1);
-	matrix C_hat(m_Simulation, 1);
+	matrix C_hat;
 	matrix chm(1, exec_schedule.nb_rows());
-	matrix V(m_Simulation, 1);
 	matrix paths;
 	matrix interpolated_paths;
 	double dt_sde;
@@ -1266,6 +1258,7 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 
 	}
 
+	
 	dt_sde = m_diffusion->Get_Dt();
 
 	for (size_t j = 1; j < exec_schedule.nb_rows(); j++)
@@ -1279,47 +1272,75 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 
 	size_t Isteps = Index.nb_cols() -2; //Index will have as much columns as there are execution dates.
 
+	stopping_time.assign(m_Simulation, ceil(exec_schedule(exec_schedule.nb_rows()-1, 0) * steps));
+	//the first available stoppping time is the last execution date available
+
 	// Regression part
 	for (size_t t = Isteps; t > 0; t--)
 	{
+		std::vector<double> It;
+		std::vector<double> V;
+		std::vector<size_t> is_ITM;
 
 		df = exp(-r * Dt_schedule(t, 0));
+
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
-			V(i, 0) = df * simulated_price(i, 0);
-			It(i, 0) = Index(i, t); //take index at t-1;
-
-			if (Payoff->operator()(It(i, 0)) > 0)
+			if (Payoff->operator()(Index(i, t)) > 0)
 			{
 				ITM(i, 0) = 1;
+				It.push_back(Index(i,t));
+				V.push_back(df * simulated_price(i, 0));
+				//V.push_back(df * Payoff->operator()(Index(i, t)));
+				is_ITM.push_back(i);
+				
 			}
 			else { ITM(i, 0) = -1; };
 		}
-
-
-		C_hat = C_Hat_regression(It, V); //the function will apply the polynomes, create Beta_Hat, and return C_hat as a matrix
-
-		for (size_t i = 0; i < C_hat.nb_rows(); i++)
+		if (It.size() == 0) 
 		{
+			std::cout << "Warning, 0 paths ITM" << std::endl; goto increment;
+		};
+		{
+			matrix It_mat(It, It.size());
+			matrix V_mat(V, V.size());
 
-			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
+			C_hat = C_Hat_regression(It_mat, V_mat); //the function will apply the polynomes, create Beta_Hat, and return C_hat as a matrix
+
+			size_t c = 0;
+			for (size_t i = 0; i < ITM.nb_rows(); i++)
 			{
-				simulated_price(i, 0) = Payoff->operator()(Index(i, t));
+
+				if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
+				{
+					simulated_price(i, 0) = df*Payoff->operator()(Index(is_ITM[c], t));
+					stopping_time[i] = t;
+					c += 1;
+				}
+
+				{
+					simulated_price(i, 0) = df*simulated_price(i, 0);
+					stopping_time[i] = stopping_time[i];
+				}
+
+
 			}
 
-			{
-				simulated_price(i, 0) = df * simulated_price(i, 0);
-			}
-
-
+			It.clear();
+			V.clear();
+			It_mat.Clear();
+			V_mat.Clear();
+			is_ITM.clear();
 		}
-
+	increment: 
+		for (size_t i = 0; i < ITM.nb_rows(); i++)
+		{
+			simulated_price(i, 0) = df * simulated_price(i, 0);
+		}
 	}
 
-	
-	double last_df = exp(-r *last_dt);
-	MC_price = last_df*simulated_price.mean();
+	MC_price = simulated_price.mean();
 
 	MC_variance = simulated_price.variance();
 
@@ -1340,21 +1361,9 @@ Bermudean_BasketOption_CV::Bermudean_BasketOption_CV(size_t nbSimu, PayOffBasket
 
 void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 {
-	//matrix Phit(m_Simulation, Phi.size());
-	//matrix poly_order_n(m_Simulation, 1);
-	//matrix Phit_T(Phi.size(), m_Simulation);
-	//matrix SDP_Phi(Phi.size(), Phi.size());
-	//matrix Phi_V(Phi.size(), 1);
-	//matrix inv_SDP_Phi(Phi.size(), Phi.size());
-	//matrix Beta_hat(Phi.size(), 1);
+	
 
-	//matrix Phit_2(m_Simulation, Phi.size());
-	//matrix poly_order_n_2(m_Simulation, 1);
-	//matrix Phit_T_2(Phi.size(), m_Simulation);
-	//matrix SDP_Phi_2(Phi.size(), Phi.size());
-	//matrix Phi_V_2(Phi.size(), 1);
-	//matrix inv_SDP_Phi_2(Phi.size(), Phi.size());
-	//matrix Beta_hat_2(Phi.size(), 1);
+	
 
 	std::cout << "Bermudean MC LS with Control Variable" << std::endl;
 
@@ -1363,18 +1372,14 @@ void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 	matrix weights = Payoff->GetWeights();
 	matrix Index(m_Simulation, exec_schedule.nb_rows());
 	matrix ITM(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
-	matrix It(m_Simulation, 1);
-	matrix C_hat(m_Simulation, 1);
+	matrix C_hat;
 	matrix chm;
-	matrix V(m_Simulation, 1);
 	matrix paths;
 
 	matrix log_Index(m_Simulation, exec_schedule.nb_rows());
 	matrix ITM2(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
-	matrix It2(m_Simulation, 1);
-	matrix C_hat_2(m_Simulation, 1);
+	matrix C_hat_2;
 	matrix chm_2;
-	matrix V_2(m_Simulation, 1);
 	matrix log_spot;
 	matrix interpolated_paths;
 	double dt_sde;
@@ -1387,7 +1392,7 @@ void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 		m_diffusion->Simulate(start, end, steps);
 		paths = m_diffusion->GetAllPaths();
 		log_spot = paths;
-		interpolated_paths = wkday->index_executed(paths, exec_schedule,steps);
+		interpolated_paths = wkday->index_executed(paths, exec_schedule, steps);
 
 		for (size_t i = 0; i < interpolated_paths.nb_rows(); i++)
 		{
@@ -1422,70 +1427,129 @@ void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 
 	double last_dt = ceil(exec_schedule(0, 0) * steps) * dt_sde;
 
+	stopping_time.assign(m_Simulation, ceil(exec_schedule(exec_schedule.nb_rows() - 1, 0) * steps));
+
 	// Regression part
 
 	size_t Isteps = Index.nb_cols() - 2;
 
 	for (size_t t = Isteps; t > 0; t--)
 	{
+		std::vector<double> V;
+		std::vector<double> V_2;
+		std::vector<size_t> is_ITM_2;
+		std::vector<size_t> is_ITM;
+		std::vector<double> It;
+		std::vector<double> It_2;
+
 		df = exp(-r * Dt_schedule(t, 0));
 		// 1) separate ITM path from others 
+
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
-			V(i, 0) = df * simulated_price(i, 0);
-			V_2(i, 0) = df * simulated_price_CP(i, 0);
-			It(i, 0) = Index(i, t); //take index at t-1;
-			It2(i, 0) = log_Index(i, t);
-			if (Payoff->operator()(It(i, 0)) > 0)
+
+			if (Payoff->operator()(Index(i, t)) > 0)
 			{
 				ITM(i, 0) = 1;
+				V.push_back(df * simulated_price(i, 0));
+				//V.push_back(df*Payoff->operator()(Index(i, t));
+				It.push_back(Index(i, t));
+				is_ITM.push_back(i);
 			}
 			else { ITM(i, 0) = -1; };
 
-			if (CPayoff->operator()(It2(i, 0)) > 0)
+			if (CPayoff->operator()(log_Index(i, t)) > 0)
 			{
 				ITM2(i, 0) = 1;
+				V_2.push_back(df * simulated_price_CP(i, 0));
+				//V_2.push_back(df * CPayoff->operator()(log_Index(i, t)));
+				It_2.push_back(log_Index(i, t));
+				is_ITM_2.push_back(i);
 			}
 			else { ITM2(i, 0) = -1; };
 		}
 
-		C_hat = C_Hat_regression(It, V);
-		C_hat_2 = C_Hat_regression(It2, V_2);
-
-		for (size_t i = 0; i < C_hat.nb_rows(); i++)
-		{
-
-			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
+			if ((It.size() == 0) && (It_2.size() == 0))
 			{
-				simulated_price(i, 0) = Payoff->operator()(Index(i, t));
+				std::cout << "Warning 0 paths ITM" << std::endl;
+				goto increment;
 			}
 
 			{
-				simulated_price(i, 0) = df * simulated_price(i, 0);
+				matrix It_mat(It, It.size());
+				matrix V_mat(V, V.size());
+				matrix It_mat_2(It_2, It_2.size());
+				matrix V_mat_2(V_2, V_2.size());
+				C_hat = C_Hat_regression(It_mat, V_mat);
+				C_hat_2 = C_Hat_regression(It_mat_2, V_mat_2);
+
+				size_t c = 0;
+				size_t c2 = 0;
+
+				for (size_t i = 0; i < ITM.nb_rows(); i++)
+				{
+
+					if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
+					{
+						simulated_price(i, 0) = df * Payoff->operator()(Index(is_ITM[c], t));
+						stopping_time[i] = t;
+						c += 1;
+					}
+
+					{
+						simulated_price(i, 0) = df*simulated_price(i, 0);
+						stopping_time[i] = stopping_time[i];
+					}
+
+			
+
+
+
+					if ((ITM2(i, 0) == 1) && (CPayoff->operator()(log_Index(is_ITM_2[c2], t)) > C_hat_2(c2, 0)))
+					{
+						simulated_price_CP(i, 0) = df * CPayoff->operator()(log_Index(is_ITM_2[c2], t));
+						c2 += 1;
+					}
+
+					{
+
+
+						simulated_price_CP(i, 0) =df* simulated_price_CP(i, 0);
+					}
+
+					CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
+
+
+				}
+
+				V_2.clear();
+				V.clear();
+				It.clear();
+				It_2.clear();
+
+				It_mat.Clear();
+				V_mat.Clear();
+				is_ITM.clear();
+				is_ITM_2.clear();
+
+				It_mat_2.Clear();
+				V_mat_2.Clear();
+
 			}
 
+		increment:
 
-
-
-			if ((ITM2(i, 0) == 1) && (CPayoff->operator()(log_Index(i, t)) > C_hat_2(i, 0)))
+			for (size_t i = 0; i < ITM.nb_rows(); i++)
 			{
-				simulated_price_CP(i, 0) = CPayoff->operator()(log_Index(i, t));
+
+				simulated_price(i, 0) = df*simulated_price(i, 0);
+				simulated_price_CP(i, 0) = df*simulated_price_CP(i, 0);
+				CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
 			}
-
-			{
-
-
-				simulated_price_CP(i, 0) = df * simulated_price_CP(i, 0);
-			}
-
-			CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;;
-
-
 		}
-	}
+	
 
-	double last_df = exp(-r * last_dt);
-	MC_price = last_df*CV.mean();
+	MC_price = CV.mean();
 	MC_variance = CV.variance();
 
 };
@@ -1505,21 +1569,7 @@ Bermudean_BasketOption_antithetic::Bermudean_BasketOption_antithetic(size_t nbSi
 
 void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_t steps)
 {
-	//matrix Phit(m_Simulation / 2, Phi.size());
-	//matrix poly_order_n(m_Simulation / 2, 1);
-	//matrix Phit_T(Phi.size(), m_Simulation / 2);
-	//matrix SDP_Phi(Phi.size(), Phi.size());
-	//matrix Phi_V(Phi.size(), 1);
-	//matrix inv_SDP_Phi(Phi.size(), Phi.size());
-	//matrix Beta_hat(Phi.size(), 1);
 
-	//matrix Phit(m_Simulation / 2, Phi.size());
-	//matrix poly_order_n(m_Simulation / 2, 1);
-	//matrix Phit_T(Phi.size(), m_Simulation / 2);
-	//matrix SDP_Phi(Phi.size(), Phi.size());
-	//matrix Phi_V(Phi.size(), 1);
-	//matrix inv_SDP_Phi(Phi.size(), Phi.size());
-	//matrix Beta_hat(Phi.size(), 1);
 
 	std::cout << "Bermudean MC with antithetic" << std::endl;
 
@@ -1530,10 +1580,8 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 	matrix weights = Payoff->GetWeights();
 	matrix Index(m_Simulation / 2, exec_schedule.nb_rows());
 	matrix ITM(m_Simulation / 2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It(m_Simulation / 2, 1);
-	matrix C_hat(m_Simulation / 2, 1);
+	matrix C_hat;
 	matrix chm;
-	matrix V(m_Simulation / 2, 1);
 	matrix paths;
 	matrix interpolated_paths;
 	matrix paths_anti;
@@ -1543,9 +1591,7 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 	matrix chm_anti;
 	matrix Index_anti(m_Simulation / 2, exec_schedule.nb_rows());
 	matrix ITM_anti(m_Simulation / 2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It_anti(m_Simulation / 2, 1);
-	matrix C_hat_anti(m_Simulation / 2, 1);
-	matrix V_anti(m_Simulation / 2, 1);
+	matrix C_hat_anti;
 	double dt_sde;
 	double df;
 	//double test_df;
@@ -1558,27 +1604,26 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 		//std::cout << "simulation " << s << std::endl;
 		if (s % 2 == 0)
 		{
-			x_diffusion->Simulate(start, end, steps);
-			paths = x_diffusion->GetAllPaths();
+			m_diffusion->Simulate(start, end, steps);
+			paths = m_diffusion->GetAllPaths();
 			interpolated_paths = wkday->index_executed(paths, exec_schedule, steps);
 			chm = weights * interpolated_paths;
 
 			for (size_t i = 0; i < chm.nb_cols(); i++)
 			{
-				Index(k, i) = chm(0, i);
+				Index(k_a, i) = chm(0, i);
 
 			}
 
-			simulated_price(k, 0) = Payoff->operator()(Index(k, Index.nb_cols() - 1));
+			simulated_price(k_a, 0) = Payoff->operator()(Index(k_a, Index.nb_cols() - 1));
 
-			k += 1;
-
+			//k += 1;
 
 
 		}
 		else
 		{
-			paths_anti = x_diffusion->GetAllPathsAnti();
+			paths_anti = m_diffusion->GetAllPathsAnti();
 			interpolated_paths_anti = wkday->index_executed(paths_anti, exec_schedule, steps);
 			chm_anti = weights * interpolated_paths_anti;
 
@@ -1593,7 +1638,7 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 		}
 	}
 
-	dt_sde = x_diffusion->Get_Dt();
+	dt_sde = m_diffusion->Get_Dt();
 
 	for (size_t j = 1; j < exec_schedule.nb_rows(); j++)
 	{
@@ -1604,6 +1649,7 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 
 	double last_dt = ceil(exec_schedule(0, 0) * steps) * dt_sde;
 
+	stopping_time.assign(m_Simulation, ceil(exec_schedule(exec_schedule.nb_rows() - 1, 0) * steps));
 
 	// Regression part 
 	size_t Isteps = Index.nb_cols() - 2;
@@ -1611,69 +1657,116 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 	for (size_t t = Isteps; t > 0; t--)
 	{
 
+		std::vector<double> V;
+		std::vector<double> V_anti;
+		std::vector<size_t> is_ITM_anti;
+		std::vector<size_t> is_ITM;
+		std::vector<double> It;
+		std::vector<double> It_anti;
+
+
 		df = exp(-r * Dt_schedule(t, 0));
-		//test_df = exp(-r * dt_sde);
-		//std::cout << "constant dt " << test_df << std::endl;
-		//std::cout << " dt schedule " << df << std::endl;
+
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
-			V(i, 0) = df * simulated_price(i, 0);
-			It(i, 0) = Index(i, t); //take index at t-1;
 
-			if (Payoff->operator()(It(i, 0)) > 0)
+			if (Payoff->operator()(Index(i, t)) > 0)
 			{
 				ITM(i, 0) = 1;
+				It.push_back(Index(i, t));
+				V.push_back(df * simulated_price(i, 0));
+				//V.push_back(df * Payoff->operator()(Index(i, t)));
+				is_ITM.push_back(i);
 			}
 			else { ITM(i, 0) = -1; };
 
-			V_anti(i, 0) = df * simulated_price_anti(i, 0);
-			It_anti(i, 0) = Index_anti(i, t); //take index at t-1;
-
-			if (Payoff->operator()(It_anti(i, 0)) > 0)
+			if (Payoff->operator()(Index_anti(i, t)) > 0)
 			{
 				ITM_anti(i, 0) = 1;
+				It_anti.push_back(Index_anti(i, t));
+				V_anti.push_back(df * simulated_price_anti(i, 0));
+				//V_anti.push_back(df*Payoff->operator()(Index_anti(i, t)));
+				is_ITM_anti.push_back(i);
 			}
 			else { ITM_anti(i, 0) = -1; };
 		}
 
-		
-		C_hat = C_Hat_regression(It, V);
-
-		C_hat_anti = C_Hat_regression(It_anti, V_anti);
-
-
-		for (size_t i = 0; i < C_hat.nb_rows(); i++)
+		if ((It.size() == 0) && (It_anti.size() == 0))
 		{
+			std::cout << "Warning 0 paths ITM" << std::endl;
+			goto increment;
+		}
 
-			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
+		{
+			matrix It_mat(It, It.size());
+			matrix V_mat(V, V.size());
+			matrix It_mat_anti(It_anti, It_anti.size());
+			matrix V_mat_anti(V_anti, V_anti.size());
+
+			C_hat = C_Hat_regression(It_mat, V_mat);
+
+			C_hat_anti = C_Hat_regression(It_mat_anti, V_mat_anti);
+
+			size_t c = 0;
+			size_t ca = 0;
+
+			for (size_t i = 0; i < ITM.nb_rows(); i++)
 			{
-				simulated_price(i, 0) = Payoff->operator()(Index(i, t));
-				//early_exec.push_back(i);
+
+
+				if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
+				{
+					simulated_price(i, 0) = df*Payoff->operator()(Index(is_ITM[c], t));
+					stopping_time[i] = t;
+					c += 1;
+				}
+
+				{
+					simulated_price(i, 0) = df*simulated_price(i, 0);
+					stopping_time[i] = stopping_time[i];
+				}
+
+
+				if ((ITM_anti(i, 0) == 1) && (Payoff->operator()(Index_anti(is_ITM_anti[ca], t)) > C_hat_anti(ca, 0)))
+				{
+					simulated_price_anti(i, 0) = df*Payoff->operator()(Index_anti(is_ITM_anti[ca], t));
+				}
+
+				{
+
+					simulated_price_anti(i, 0) = df*simulated_price_anti(i, 0);
+				}
+
+				average_price(i, 0) = (simulated_price_anti(i, 0) + simulated_price(i, 0)) * 0.5;
 			}
 
-			{
-				simulated_price(i, 0) = df * simulated_price(i, 0);
-			}
+			V_anti.clear();
+			V.clear();
+			It.clear();
+			It_anti.clear();
 
+			It_mat.Clear();
+			V_mat.Clear();
+			is_ITM.clear();
+			is_ITM_anti.clear();
 
-			if ((ITM_anti(i, 0) == 1) && (Payoff->operator()(Index_anti(i, t)) > C_hat_anti(i, 0)))
-			{
-				simulated_price_anti(i, 0) = Payoff->operator()(Index_anti(i, t));
-				//early_exec.push_back(i);
-			}
+			It_mat_anti.Clear();
+			V_mat_anti.Clear();
+		}
 
-			{
+	increment: 
 
-				simulated_price_anti(i, 0) = df * simulated_price_anti(i, 0);
-			}
-
+		for (size_t i = 0; i < ITM.nb_rows(); i++) 
+		{
+			simulated_price(i, 0) = df*simulated_price(i, 0);
+			simulated_price_anti(i, 0) = df*simulated_price_anti(i, 0);
 			average_price(i, 0) = (simulated_price_anti(i, 0) + simulated_price(i, 0)) * 0.5;
 		}
+		
 	}
-
-	double last_df = exp(-r * last_dt);
-	MC_price = last_df*average_price.mean();
+	
+	MC_price = average_price.mean();
 
 	MC_variance = average_price.variance();
 
@@ -1710,22 +1803,13 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 
 	simulated_price_CP.Resize(m_Simulation / 2, 1);
 	simulated_price_CP_anti.Resize(m_Simulation / 2, 1);
-	average_price.Resize(m_Simulation / 2, 1);
+
 
 	matrix weights = Payoff->GetWeights();
 	matrix Index(m_Simulation / 2, exec_schedule.nb_rows());
 	matrix ITM(m_Simulation / 2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It(m_Simulation / 2, 1);
-	//matrix Phit(m_Simulation / 2, Phi.size());
-	//matrix poly_order_n(m_Simulation / 2, 1);
-	//matrix Phit_T(Phi.size(), m_Simulation / 2);
-	//matrix SDP_Phi(Phi.size(), Phi.size());
-	//matrix Phi_V(Phi.size(), 1);
-	//matrix inv_SDP_Phi(Phi.size(), Phi.size());
-	//matrix Beta_hat(Phi.size(), 1);
-	matrix C_hat(m_Simulation / 2, 1);
+	matrix C_hat;
 	matrix chm;
-	matrix V(m_Simulation / 2, 1);
 	matrix paths;
 	matrix paths_anti;
 
@@ -1733,48 +1817,21 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 	matrix chm_anti;
 	matrix Index_anti(m_Simulation / 2, exec_schedule.nb_rows());
 	matrix ITM_anti(m_Simulation / 2, 1); //need to separate which paths are ITM at each iteration 
-	matrix It_anti(m_Simulation / 2, 1);
-	//matrix Phit_anti(m_Simulation / 2, Phi.size());
-	//matrix poly_order_n_anti(m_Simulation / 2, 1);
-	//matrix Phit_T_anti(Phi.size(), m_Simulation / 2);
-	//matrix SDP_Phi_anti(Phi.size(), Phi.size());
-	//matrix Phi_V_anti(Phi.size(), 1);
-	//matrix inv_SDP_Phi_anti(Phi.size(), Phi.size());
-	//matrix Beta_hat_anti(Phi.size(), 1);
-	matrix C_hat_anti(m_Simulation / 2, 1);
-	matrix V_anti(m_Simulation / 2, 1);
+	matrix C_hat_anti;
 
 
 
 	matrix log_Index(m_Simulation, exec_schedule.nb_rows());
 	matrix ITM2(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
-	matrix It2(m_Simulation, 1);
-	//matrix Phit_2(m_Simulation, Phi.size());
-	//matrix poly_order_n_2(m_Simulation, 1);
-	//matrix Phit_T_2(Phi.size(), m_Simulation);
-	//matrix SDP_Phi_2(Phi.size(), Phi.size());
-	//matrix Phi_V_2(Phi.size(), 1);
-	//matrix inv_SDP_Phi_2(Phi.size(), Phi.size());
-	//matrix Beta_hat_2(Phi.size(), 1);
-	matrix C_hat_2(m_Simulation, 1);
+	matrix C_hat_2;
 	matrix chm_2;
-	matrix V_2(m_Simulation, 1);
 	matrix log_spot;
 
 
 	matrix log_Index_anti(m_Simulation, exec_schedule.nb_rows());
 	matrix ITM2_anti(m_Simulation, 1); //need to separate which paths are ITM at each iteration 
-	matrix It2_anti(m_Simulation, 1);
-	//matrix Phit_2_anti(m_Simulation, Phi.size());
-	//matrix poly_order_n_2_anti(m_Simulation, 1);
-	//matrix Phit_T_2_anti(Phi.size(), m_Simulation);
-	//matrix SDP_Phi_2_anti(Phi.size(), Phi.size());
-	//matrix Phi_V_2_anti(Phi.size(), 1);
-	//matrix inv_SDP_Phi_2_anti(Phi.size(), Phi.size());
-	//matrix Beta_hat_2_anti(Phi.size(), 1);
-	matrix C_hat_2_anti(m_Simulation, 1);
+	matrix C_hat_2_anti;
 	matrix chm_2_anti;
-	matrix V_2_anti(m_Simulation, 1);
 	matrix log_spot_anti;
 
 	matrix interpolated_paths;
@@ -1791,8 +1848,8 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 		//std::cout << "simulation " << s << std::endl;
 		if (s % 2 == 0)
 		{
-			x_diffusion->Simulate(start, end, steps);
-			paths = x_diffusion->GetAllPaths();
+			m_diffusion->Simulate(start, end, steps);
+			paths = m_diffusion->GetAllPaths();
 			interpolated_paths = wkday->index_executed(paths, exec_schedule, steps);
 			log_spot = paths;
 			chm = weights * interpolated_paths;
@@ -1852,7 +1909,7 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 		}
 	}
 
-	dt_sde = x_diffusion->Get_Dt();
+	dt_sde = m_diffusion->Get_Dt();
 
 	for (size_t j = 1; j < exec_schedule.nb_rows(); j++)
 	{
@@ -1862,6 +1919,7 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 	}
 
 	double last_dt = ceil(exec_schedule(0, 0)) * dt_sde;
+	stopping_time.assign(m_Simulation, ceil(exec_schedule(exec_schedule.nb_rows() - 1, 0) * steps));
 
 	// Regression part 
 
@@ -1870,115 +1928,210 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 	for (size_t t = Isteps; t > 0; t--)
 	{
 
+		std::vector<double> V;
+		std::vector<double> V_anti;
+		std::vector<size_t> is_ITM_anti;
+		std::vector<size_t> is_ITM;
+		std::vector<double> It;
+		std::vector<double> It_anti;
+
+
+		std::vector<double> V_2;
+		std::vector<double> V_anti_2;
+		std::vector<size_t> is_ITM_anti_2;
+		std::vector<size_t> is_ITM_2;
+		std::vector<double> It_2;
+		std::vector<double> It_anti_2;
+
+
 		df = exp(-r * Dt_schedule(t, 0));
 		// 1) separate ITM path from others 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
-			V(i, 0) = df * simulated_price(i, 0);
-			It(i, 0) = Index(i, t); //take index at t-1;
+	
 
-			V_2(i, 0) = df * simulated_price_CP(i, 0);
-			It2(i, 0) = log_Index(i, t); //take index at t-1;
-
-			V_anti(i, 0) = df * simulated_price_anti(i, 0);
-			It_anti(i, 0) = Index_anti(i, t); //take index at t-1;
-
-			V_2_anti(i, 0) = df * simulated_price_CP_anti(i, 0);
-			It2_anti(i, 0) = log_Index_anti(i, t); //take index at t-1;
-
-
-			if (Payoff->operator()(It(i, 0)) > 0)
+			if (Payoff->operator()(Index(i, t)) > 0)
 			{
 				ITM(i, 0) = 1;
+				V.push_back(df * simulated_price(i, 0));
+				//V.push_back(df* Payoff->operator()(Index(i, t)));
+				It.push_back(Index(i, t));
+				is_ITM.push_back(i);
+
+
 			}
 			else { ITM(i, 0) = -1; };
 
-			if (CPayoff->operator()(It2(i, 0)) > 0)
+			if (CPayoff->operator()(log_Index(i, t)) > 0)
 			{
 				ITM2(i, 0) = 1;
+				V_2.push_back(df * simulated_price_CP(i, 0));
+				//V_2.push_back(df* CPayoff->operator()(log_Index(i, t)));
+				It_2.push_back(log_Index(i, t));
+				is_ITM_2.push_back(i);
+
 			}
 			else { ITM2(i, 0) = -1; };
 
 
-			if (Payoff->operator()(It_anti(i, 0)) > 0)
+			if (Payoff->operator()(Index_anti(i, t)) > 0)
 			{
 				ITM_anti(i, 0) = 1;
+				//V_anti.push_back(df * simulated_price_anti(i, 0));
+				V_anti.push_back(df* Payoff->operator()(Index_anti(i, t)));
+				It_anti.push_back(Index_anti(i, t));
+				is_ITM_anti.push_back(i);
+
 			}
 			else { ITM_anti(i, 0) = -1; };
 
 
-			if (CPayoff->operator()(It2_anti(i, 0)) > 0)
+			if (CPayoff->operator()(log_Index_anti(i, t)) > 0)
 			{
 				ITM2_anti(i, 0) = 1;
+				V_anti_2.push_back(df * simulated_price_CP_anti(i, 0));
+				//V_anti_2.push_back(df* CPayoff->operator()(log_Index_anti(i, t)));
+				It_anti_2.push_back(log_Index_anti(i, t));
+				is_ITM_anti_2.push_back(i);
+
 			}
 			else { ITM2_anti(i, 0) = -1; };
 
 		}
 
-
-		C_hat = C_Hat_regression(It, V);
-		C_hat_2 = C_Hat_regression(It2, V_2);
-		C_hat_anti = C_Hat_regression(It_anti, V_anti);
-		C_hat_2_anti = C_Hat_regression(It2_anti, V_2_anti);
-
-		for (size_t i = 0; i < C_hat.nb_rows(); i++)
+		if ((It.size() == 0) && (It_2.size() == 0) && (It_anti.size() == 0) && (It_anti_2.size() == 0))
 		{
-
-			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(i, t)) > C_hat(i, 0)))
-			{
-				simulated_price(i, 0) = Payoff->operator()(Index(i, t));
-				//early_exec.push_back(i);
-			}
-			else
-			{
-
-				simulated_price(i, 0) = df * simulated_price(i, 0);
-			}
-
-			if ((ITM2(i, 0) == 1) && (CPayoff->operator()(log_Index(i, t)) > C_hat_2(i, 0)))
-			{
-				simulated_price_CP(i, 0) = CPayoff->operator()(log_Index(i, t));
-				//early_exec.push_back(i);
-			}
-			else
-			{
-
-				simulated_price_CP(i, 0) = df * simulated_price_CP(i, 0);
-			}
-
-
-			if ((ITM_anti(i, 0) == 1) && (Payoff->operator()(Index_anti(i, t)) > C_hat_anti(i, 0)))
-			{
-				simulated_price_anti(i, 0) = Payoff->operator()(Index_anti(i, t));
-				//early_exec.push_back(i);
-			}
-			else
-			{
-
-				simulated_price_anti(i, 0) = df * simulated_price_anti(i, 0);
-			}
-
-
-			if ((ITM2_anti(i, 0) == 1) && (CPayoff->operator()(log_Index_anti(i, t)) > C_hat_2_anti(i, 0)))
-			{
-				simulated_price_CP_anti(i, 0) = CPayoff->operator()(log_Index_anti(i, t));
-				//early_exec.push_back(i);
-			}
-			else
-			{
-
-				simulated_price_CP_anti(i, 0) = df * simulated_price_CP_anti(i, 0);
-			}
-
-			temp = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
-			temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0) + ExpPriceClsForm;
-
-			average_price(i, 0) = (temp + temp_anti) * 0.5;
+			std::cout << "Warning 0 paths ITM" << std::endl;
+			goto increment;
 		}
+
+
+		{
+			matrix It_mat(It, It.size());
+			matrix It_mat_anti(It_anti, It_anti.size());
+
+			matrix It2_mat(It_2, It_2.size());
+			matrix It2_mat_anti(It_anti_2, It_anti_2.size());
+
+			matrix V2_mat(V_2, V_2.size());
+			matrix V2_mat_anti(V_anti_2, V_anti_2.size());
+
+			matrix V_mat(V, V.size());
+			matrix V_mat_anti(V_anti, V_anti.size());
+
+			C_hat = C_Hat_regression(It_mat, V_mat);
+			C_hat_2 = C_Hat_regression(It2_mat, V2_mat);
+			C_hat_anti = C_Hat_regression(It_mat_anti, V_mat_anti);
+			C_hat_2_anti = C_Hat_regression(It2_mat_anti, V2_mat_anti);
+
+			size_t c = 0;
+			size_t c2 = 0;
+			size_t ca = 0;
+			size_t ca_2 = 0;
+
+			for (size_t i = 0; i < ITM.nb_rows(); i++)
+			{
+
+				if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
+				{
+					simulated_price(i, 0) = df*Payoff->operator()(Index(is_ITM[c], t));
+					stopping_time[i] = t;
+					c += 1;
+				}
+				else
+				{
+
+					simulated_price(i, 0) = df*simulated_price(i, 0);
+				}
+
+				if ((ITM2(i, 0) == 1) && (CPayoff->operator()(log_Index(is_ITM_2[c2], t)) > C_hat_2(c2, 0)))
+				{
+					simulated_price_CP(i, 0) = df*CPayoff->operator()(log_Index(is_ITM_2[c2], t));
+					c2 += 1;
+				}
+				else
+				{
+
+					simulated_price_CP(i, 0) = df*simulated_price_CP(i, 0);
+				}
+
+
+				if ((ITM_anti(i, 0) == 1) && (Payoff->operator()(Index_anti(is_ITM_anti[ca], t)) > C_hat_anti(ca, 0)))
+				{
+					simulated_price_anti(i, 0) = df*Payoff->operator()(Index_anti(is_ITM_anti[ca], t));
+					ca += 1;
+				}
+				else
+				{
+
+					simulated_price_anti(i, 0) = df*simulated_price_anti(i, 0);
+				}
+
+
+				if ((ITM2_anti(i, 0) == 1) && (CPayoff->operator()(log_Index_anti(is_ITM_anti_2[ca_2], t)) > C_hat_2_anti(ca_2, 0)))
+				{
+					simulated_price_CP_anti(i, 0) = df*CPayoff->operator()(log_Index_anti(is_ITM_anti_2[ca_2], t));
+					ca_2 += 1;
+				}
+				else
+				{
+
+					simulated_price_CP_anti(i, 0) = df*simulated_price_CP_anti(i, 0);
+				}
+
+				temp = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
+				temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0) + ExpPriceClsForm;
+
+				average_price(i, 0) = (temp + temp_anti) * 0.5;
+
+			}
+		
+			It_mat.Clear();
+			V_mat.Clear();
+			It.clear();
+			V.clear();
+			is_ITM.clear();
+
+			It2_mat.Clear();
+			V2_mat.Clear();
+			It_anti.clear();
+			V_anti.clear();
+			is_ITM_anti.clear();
+
+			It_mat_anti.Clear();
+			V_mat_anti.Clear();
+			It_anti.clear();
+			V_anti.clear();
+			is_ITM_anti.clear();
+
+			It2_mat_anti.Clear();
+			V2_mat_anti.Clear();
+			It_anti_2.clear();
+			V_anti_2.clear();
+			is_ITM_anti_2.clear();
+		
+		}
+
+	increment:
+
+		for (size_t i = 0; i < ITM.nb_rows(); i++)
+		{
+				simulated_price(i, 0) = df*simulated_price(i,0);
+				simulated_price_CP(i, 0) = df*simulated_price_CP(i, 0);
+
+				simulated_price_anti(i, 0) = df*simulated_price_anti(i, 0);
+				simulated_price_CP_anti(i, 0) = df*simulated_price_CP_anti(i, 0);
+				temp = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
+				temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0) + ExpPriceClsForm;
+
+				average_price(i, 0) = (temp + temp_anti) * 0.5;
+				
+			}
+
+
 	}
 
-	double last_df = exp(-r * last_dt);
-	MC_price = last_df*average_price.mean();
+	MC_price = average_price.mean();
 
 	MC_variance = average_price.variance();
 

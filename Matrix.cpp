@@ -1,4 +1,5 @@
 #include "Matrix.hpp"
+#include <cmath>
 #include <fstream>
 
 /* This file contains all methods used to manipulate matrix objects
@@ -21,6 +22,42 @@ matrix::matrix(std::vector<std::vector<double>> data)
 	  m_nb_cols(data[0].size())
 {
 };
+
+
+matrix::matrix(std::vector<double> data, size_t rows)
+: m_nb_rows(1), m_nb_cols(data.size())
+{
+	//std::cout << "enter the function" << std::endl;
+	if (rows == data.size()) 
+	{
+		//create the matrix column 
+		m_nb_rows = rows;
+		m_nb_cols = 1;
+		m_data.resize(rows);
+		
+		for (size_t r = 0; r < rows; r++) 
+		{
+			m_data[r].resize(1);
+			m_data[r][0] = data[r];
+
+		}
+	}
+	else
+	{
+		//create the matrix row
+		m_nb_rows = 1;
+		m_nb_cols = rows;
+		m_data.resize(1);
+		m_data[0] = data;
+		//for (size_t r = 0; r < rows; r++)
+		//{
+		//	m_data[0][r] = data[r];
+
+		//}
+	}
+	
+};
+
 size_t matrix::nb_rows()
 {
 	return m_nb_rows;
@@ -59,18 +96,21 @@ void matrix::Resize(std::size_t nb_rows, std::size_t nb_cols)
 	{
 		m_data[i].resize(m_nb_cols,0.);
 	}
+	// m_data.resize(m_nb_rows,std::vector<double>(m_nb_cols));
 }
 void matrix::Diagonalization()
 {
 	Resize(m_nb_rows,m_nb_rows);
 	
+	// std::cout << m_data.size() << std::endl;
+	// std::cout << m_data[0].size() << std::endl;
 	for(size_t i = 0; i<m_nb_rows;++i)
 	{
 		double val = m_data[i][0];
-
+		// std::cout <<i << std::endl;
 		for(size_t j = 0; j<m_nb_rows;++j)
 		{
-
+			// std::cout <<j << std::endl;
 			
 			if(i==j)
 			{
@@ -292,10 +332,14 @@ matrix matrix::area(size_t end_r, size_t end_c, std::vector<size_t> opt_start)
 
 };
 
+
+
 void matrix::CSV(std::string filename)
 {
 	std::ofstream out;
+	// myFile.open(filename);
 	out.open(filename);
+	// ofstream out("file.csv");
 
 	for (int i = 0; i < m_nb_rows; ++i)
 	{

@@ -21,6 +21,7 @@ if(MSVC)
 endif()
 
 set(PDE_SOLVER_SRCS
+    sde.hpp
     RandomNumbers.hpp
     RandomNumbers.cpp
     MonteCarlo.cpp

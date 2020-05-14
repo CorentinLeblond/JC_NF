@@ -5,8 +5,9 @@ class matrix
     {
 		public:
 			matrix(){};
-			matrix(size_t nb_row,size_t nb_col); //Constructor receiving the size of matrix and initializes it with 0. everywhere
-			matrix(std::vector<std::vector<double>> data); //Constructor receiving an already initialized vector
+			matrix(size_t nb_row,size_t nb_col);
+			matrix(std::vector<std::vector<double>> data);
+			matrix(std::vector<double> data, size_t rows);
 			
 			//Getters
 			size_t nb_rows();
