@@ -1,9 +1,11 @@
 #include "MonteCarlo.h"
 #include <iostream>
 
-//MC
-//////////////////////////////////////////////////////////
+//MC file
 
+/*This file contains all algorithms used to do Monte Carlo simulations, with European or American payoff */
+
+//Getters
 double MonteCarlo::GetPrice()
 {
 	return MC_price;
@@ -18,18 +20,21 @@ double MonteCarlo::GetVariance()
 {
 	return MC_variance;
 };
+
+//Optimal number of simulation with confidence level 99%
 void MonteCarlo::OptimalNbSimul(const double& errortolerated)
 {
 	//The two-sided 99% quantile is:
 	double quantile = 2.57;
 	
 	//It returns the minimum number of simulations required to make the estimated price below the error tolerated with confidence level 99%
-	m_Simulation = (size_t) ((quantile*quantile*MC_variance)/(errortolerated*errortolerated)); // Ptetre changer le type de la méthode comme on veut un nombre de simulation
-	
-	//The process is tho run a first companion MC on a few simulations, then estimate the variance, then definie minimul number and run the MC over this computed number
+	m_Simulation = (size_t) ((quantile*quantile*MC_variance)/(errortolerated*errortolerated));
+	//The process is tho run a first companion MC on a few simulations, then estimate the variance, then define the minimul number and run the MC over this computed number
 };
-//MonteCarlo European
-/////////////////////////////////////////////////////////
+
+/////////////////// EU ///////////////////////////////////////////////////////
+
+/* The constructor takes a number of simulation, a payoff, and a diffusion as inputs */
 MonteCarloEuropean::MonteCarloEuropean(size_t nbSimu, PayOffBasket* inputPayoff, RandomProcess* diffusion)
 {
 	r = diffusion->Get_rate();
@@ -38,168 +43,136 @@ MonteCarloEuropean::MonteCarloEuropean(size_t nbSimu, PayOffBasket* inputPayoff,
 	m_diffusion = diffusion;
 	MC_price = 0;
 	MC_variance = 0.;
-	simulated_price.Resize(nbSimu,1);
 };
 
-//Single asset Vanilla European Options
-////////////////////////////////////////////////////////
-
-/*
-EuropeanVanilla::EuropeanVanilla(size_t nbSimu, PayOff* inputPayoff, RandomProcess* diffusion):
-	MonteCarloEuropean(nbSimu,inputPayoff,diffusion)
-{
-};
-
-void EuropeanVanilla::Simulate(double start, double end, size_t steps)
-{
-	// std::cout << "MC European" << std::endl;
-	for (size_t s = 0; s < m_Simulation; s++)
-	{
-		//std::cout << "simulation " << s << std::endl;
-		m_diffusion->Simulate(start, end, steps);
-		matrix paths = m_diffusion->GetAllPaths();
-		double maturity_spot = paths(paths.nb_rows() - 1, paths.nb_cols() - 1); //get the spot at maturity
-		simulated_price(s,0) = Payoff->operator()(maturity_spot);
-
-	}
-	
-	MC_price = simulated_price.mean();
-	MC_variance = simulated_price.variance();
-
-};
-*/
 //European Basket Options
-/////////////////////////////////////////////////////////////
-
 EuropeanBasket::EuropeanBasket(size_t nbSimu, PayOffBasket* inputPayoff, RandomProcess* diffusion):
 	MonteCarloEuropean(nbSimu,inputPayoff,diffusion)
 {
 };
 
+
 void EuropeanBasket::Simulate(double start, double end, size_t steps)
 {
 	std::cout << "MC European Basket" << std::endl;
+	simulated_price.Clear(); //Clear the simulated price matrix
+	simulated_price.Resize(m_Simulation,1); //To store all prices simulated
+	//Loop for all simulated trajectories
 	for(size_t s = 0; s < m_Simulation; ++s) 
 	{
-
+		//Generate random process for N correlated assets 
 		m_diffusion->Simulate(start, end, steps);
-		
+		//And store it
 		matrix paths = m_diffusion->GetAllPaths();
 		
+		//Used to store underlying prices at maturity
 		matrix maturity_spot(paths.nb_rows(), 1);
 		
-		//std::cout << "MC mat spot"<< std::endl;
-		
+		//Loop to store underlying prices at maturity
 		for (size_t i = 0; i < paths.nb_rows(); i++) 
 		{
-			//std::cout << paths(i, paths.nb_cols() - 1) << std::endl;
-			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
-
 			//get the vector at maturity 
+			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
+			
 		}
-
+		//Compute the payoff
 		simulated_price(s,0) = Payoff->operator()(maturity_spot);
 	}
 
+	//After all simulations being done, we store the average payoff discounted
 	MC_price = exp(-r*end)*simulated_price.mean();
+	//We also store the variance of the simulation
 	MC_variance = simulated_price.variance();
 
 };
 
+//MC simulation with a pseudo-control variate 
 EuropeanBasket_controlvariable::EuropeanBasket_controlvariable(size_t nbSimu, PayOffBasket* inputPayoff, PayOffBasket* Payoff_control,
 																RandomProcess* diffusion,double inputclosedPrice)
 	:
 	MonteCarloEuropean(nbSimu,inputPayoff,diffusion),
-	CPayoff(Payoff_control),
-	ExpPriceClsForm(inputclosedPrice)
+	CPayoff(Payoff_control), //Payoff object for the control variate
+	ExpPriceClsForm(inputclosedPrice) //Price of the control variate payoff computed with closed formula
 {
 };
 
 void EuropeanBasket_controlvariable::Simulate(double start, double end, size_t steps)
 {
-	std::cout << "MC European Basket and CV" << std::endl;
-	// matrix CVprice(m_Simulation, 1);
-
+	std::cout << "MC European Basket with the CV" << std::endl;
+	simulated_price.Clear(); //Clear the simulated price matrix
+	simulated_price.Resize(m_Simulation,1); //To store all prices simulated
+	
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
-		//std::cout << "simulation " << s << std::endl;
 		m_diffusion->Simulate(start, end, steps);
+		
 		matrix paths = m_diffusion->GetAllPaths();
-		//std::cout << "Path matrix is  " << s << std::endl;
-		//paths.Print();
+
 		matrix maturity_spot(paths.nb_rows(), 1);
 
 		for (size_t i = 0; i < paths.nb_rows(); i++)
 		{
-
 			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
 			//get the vector at maturity 
 		}
-
-		//std::cout << "mat spot at " << s << std::endl;
-		//maturity_spot.Print();
-
+		
+		//Here is applied the CV mechanism, we substract the CV payoff, which is always below our basket call payoff, and add the closed formula price
 		simulated_price(s, 0) = Payoff->operator()(maturity_spot)- CPayoff->operator()(maturity_spot)+ExpPriceClsForm;
-		// CVprice(s, 0) = CPayoff->operator()(maturity_spot);
 
-
-		//if (Payoff->operator()(maturity_spot) > CPayoff->operator()(maturity_spot)) 
-		//{std::cout << "simu " << s << "difference positive" << std::endl;}
 	}
 
-	
-	// MC_price = simulated_price.mean() + CVprice.mean();
 	MC_price = exp(-r*end)*simulated_price.mean();
 	MC_variance = simulated_price.variance();
 	
 };
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/* To make the antithetic class work well, the RandomProcess* input must a corresponding BS N dimensions Antithetic object
+We use the fact that this object store each time a path and its antithetic in two different variables that are retreived 
+thanks to two methods: getallpaths and getallpathsanti.
+ */
 EuropeanBasket_Antithetic::EuropeanBasket_Antithetic(size_t nbSimu, PayOffBasket* inputPayoff, RandomProcess* diffusion):
-	MonteCarloEuropean(nbSimu,inputPayoff,diffusion),
-	x_diffusion(diffusion)
+	MonteCarloEuropean(nbSimu,inputPayoff,diffusion)
 {
-	simulated_price_Anti.Resize(m_Simulation/2,1);
-	average_price.Resize(m_Simulation/2,1);
 };
 
 void EuropeanBasket_Antithetic::Simulate(double start, double end, size_t steps)
 {
-	std::cout << "MC European Basket and Anti"<< std::endl;
+	std::cout << "MC European Basket with Antithetic"<< std::endl;
 	
-	simulated_price.Resize(m_Simulation/2,1);
-	// simulated_price_Anti.Resize(m_Simulation/2,1);
+	simulated_price.Clear(); //Clear the simulated price matrix
+	simulated_price.Resize(m_Simulation/2,1);//To store all prices simulated
+	
+	simulated_price_Anti.Clear(); //Clear the simulated price matrix
+	simulated_price_Anti.Resize(m_Simulation/2,1);
+	
+	//The average price matrix contains the average between a price for a given path, and the antithetic price for the corresponding antithetic path
+	average_price.Clear(); //Clear the average price matrix,
+	average_price.Resize(m_Simulation/2,1);
+	
 	size_t k = 0;
-	
-	std::cout << "MC European Basket antithetic"<< std::endl;
 
 	for (size_t s = 0; s < m_Simulation; s++) 
 	{
-		//std::cout << "simulation " << s << std::endl;
+		//We start from s =0, so the first loop simulates a path, the second one only uses its antithetic path, and then again we simulate a path and its antithetic etc.
 		if(s % 2 ==0)
 		{
-			x_diffusion->Simulate(start, end, steps);
-			paths = x_diffusion->GetAllPaths();
+			m_diffusion->Simulate(start, end, steps);
+			paths = m_diffusion->GetAllPaths();
 		}
 		else
 		{
-			paths = x_diffusion->GetAllPathsAnti();
+			paths = m_diffusion->GetAllPathsAnti();
 		}
-				
-		//std::cout << "path" << std::endl;
-		//paths.Print();
-		//std::cout << paths.nb_rows() << std::endl;
+
 		matrix maturity_spot(paths.nb_rows(), 1);
 
 		for (size_t i = 0; i < paths.nb_rows(); i++) 
 		{
-			//std::cout << paths(i, paths.nb_cols() - 1) << std::endl;
 			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
-			//std::cout << "index" << std::endl;
-			
 			//get the vector at maturity 
 		}
 
-		//maturity_spot.Print();
+		//Same mechanism, we store in two different matrices the prices and do an average once we have the price and the antithetic one.
 		if(s % 2 ==0)
 		{
 			simulated_price(k,0) = Payoff->operator()(maturity_spot);
@@ -219,20 +192,29 @@ void EuropeanBasket_Antithetic::Simulate(double start, double end, size_t steps)
 };
 
 EuropeanBasket_Antithetic_CV::EuropeanBasket_Antithetic_CV(size_t nbSimu, PayOffBasket* Payoff,PayOffBasket* Payoff_control,
-														BSEulerNDAntithetic* diffusion,double inputclosedPrice)
+														RandomProcess* diffusion,double inputclosedPrice)
 	:
 	EuropeanBasket_Antithetic(nbSimu,Payoff,diffusion),
 	CPayoff(Payoff_control),
 	ExpPriceClsForm(inputclosedPrice)
 {
 };
-//////////////////////////////////////////////////////////////////////////////////////////////////
+
 void EuropeanBasket_Antithetic_CV::Simulate(double start, double end, size_t steps)
 {
-	// std::cout << "MC European Basket and CV" << std::endl;
-	std::cout << "MC European Basket and Anti with CV"<< std::endl;
-	simulated_price.Resize(m_Simulation/2,1);
-	// simulated_price_Anti.Resize(m_Simulation/2,1);
+
+	std::cout << "MC European Basket with Anti and CV"<< std::endl;
+	
+	simulated_price.Clear(); //Clear the simulated price matrix
+	simulated_price.Resize(m_Simulation/2,1);//To store all prices simulated
+	
+	simulated_price_Anti.Clear(); //Clear the simulated price matrix
+	simulated_price_Anti.Resize(m_Simulation/2,1);
+	
+	//The average price matrix contains the average between a price for a given path, and the antithetic price for the corresponding antithetic path
+	average_price.Clear(); //Clear the average price matrix,
+	average_price.Resize(m_Simulation/2,1);
+	
 	size_t k = 0;
 	
 	for (size_t s = 0; s < m_Simulation; s++) 
@@ -240,29 +222,22 @@ void EuropeanBasket_Antithetic_CV::Simulate(double start, double end, size_t ste
 		//std::cout << "simulation " << s << std::endl;
 		if(s % 2 ==0)
 		{
-			x_diffusion->Simulate(start, end, steps);
-			paths = x_diffusion->GetAllPaths();
+			m_diffusion->Simulate(start, end, steps);
+			paths = m_diffusion->GetAllPaths();
 		}
 		else
 		{
-			paths = x_diffusion->GetAllPathsAnti();
+			paths = m_diffusion->GetAllPathsAnti();
 		}
-				
-		//std::cout << "path" << std::endl;
-		//paths.Print();
-		//std::cout << paths.nb_rows() << std::endl;
+	
 		matrix maturity_spot(paths.nb_rows(), 1);
 
 		for (size_t i = 0; i < paths.nb_rows(); i++) 
 		{
-			//std::cout << paths(i, paths.nb_cols() - 1) << std::endl;
 			maturity_spot(i, 0) = paths(i, paths.nb_cols() - 1);
-			//std::cout << "index" << std::endl;
-			
 			//get the vector at maturity 
 		}
 
-		//maturity_spot.Print();
 		if(s % 2 ==0)
 		{
 			simulated_price(k,0) = Payoff->operator()(maturity_spot)-CPayoff->operator()(maturity_spot)+ExpPriceClsForm;

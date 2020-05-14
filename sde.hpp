@@ -5,9 +5,10 @@
 #include <algorithm>
 #include "RandomNumbers.hpp"
 
-//Surcharge du vector
-// void export_csv(std::string f_name) const;
+/* This file contains all algorithms that are used to generate random paths for underlyings */
 
+
+//Each single path object reprensents one path of one asset
 class SinglePath
 {
 	public:
@@ -29,12 +30,12 @@ class SinglePath
 	
 };
 
+
 class RandomProcess
 {
 	public:
 		RandomProcess(){};
-		RandomProcess(RandomGenerator* gen, int dim);//dim taille du vector chaque élément est un path entier, 
-		//chq élément est un singlepath
+		RandomProcess(RandomGenerator* gen, int dim);
 		~RandomProcess(){};
 		
 		virtual void Simulate(double startTime,double EndTime, size_t nbSteps) = 0;
@@ -48,8 +49,7 @@ class RandomProcess
 	protected:
 	
 		RandomGenerator* Generator;
-		std::vector<SinglePath*> Paths; //On évite de faire des copies avec le pointeur qui 
-		//pointe vers le vrai objet
+		std::vector<SinglePath*> Paths;
 		int dimension;
 		std::vector<SinglePath*> PathsAntithetic;
 		matrix BrownianAntithetic;
@@ -123,48 +123,30 @@ class BSEuler2D : public BlackScholes2D
 		void Simulate(double startTime,double EndTime,size_t nbSteps);
 		
 };
-//////////////////////////////////////////////////////////////////////////////////////////
+
 class BlackScholesND : public RandomProcess
 {
 	public:
 
 		BlackScholesND() {};
-		//BlackScholesND(Normal* N_gen, matrix spot_vec, matrix rate_vec, matrix Sigma_vec, matrix corr_matrix,
-		//	matrix varcov);
-		BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate);
+		BlackScholesND(GaussianVector* CorrelGaussian, matrix spot_vec,double inputrate);
 		~BlackScholesND() {};
-		
-
-
-		//cette classe créé l'objet BS qui créé à l'intérieur un chemin de brownien corrélés 
 
 	protected:
 
 		matrix V_spot;
 		double rate;
-		//Normal* m_Gen;
-		//matrix V_vol;
-		//matrix m_corr_matrix;
-		//matrix m_varcov;
 		matrix Brownian;
-		GaussianVectorCholesky* m_gaussian;
+		GaussianVector* m_gaussian;
 
 };
-
-/* class BSMilsteinND : public BlackScholesND
-
-{
-
-
-
-}; */
 
 class BSEulerND : public BlackScholesND
 
 {
 	public:
 		BSEulerND() {};
-		BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate);
+		BSEulerND(GaussianVector* CorrelGaussian, matrix spot_vec,double inputrate);
 		~BSEulerND() {};
 		void Simulate(double startTime, double EndTime, size_t nbSteps);
 
@@ -173,15 +155,12 @@ class BSEulerND : public BlackScholesND
 class BSEulerNDAntithetic : public BlackScholesND
 {
 	public:
+	
 		BSEulerNDAntithetic() {};
-		BSEulerNDAntithetic(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate);
+		BSEulerNDAntithetic(GaussianVector* CorrelGaussian, matrix spot_vec,double inputrate);
 		~BSEulerNDAntithetic() {};
 		void Simulate(double startTime, double EndTime, size_t nbSteps);
-		
-		
-	
-	//private:
-	
+
 
 
 };

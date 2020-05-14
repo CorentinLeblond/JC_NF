@@ -21,14 +21,20 @@ if(MSVC)
 endif()
 
 set(PDE_SOLVER_SRCS
-    sde.hpp
     RandomNumbers.hpp
     RandomNumbers.cpp
+    MonteCarlo.cpp
+    MonteCarlo.h
     sde.cpp
+    sde.hpp
     Matrix.hpp
     Matrix.cpp
     payoff.cpp
     payoff.hpp
+    basisfunction.cpp
+    basisfunction.hpp
+    Tools.cpp
+    Tools.hpp
     main.cpp)
 
 set(PDE_SOLVER_TARGET pde_solver)

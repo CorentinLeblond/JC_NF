@@ -1,5 +1,6 @@
 #include "sde.hpp"
 
+///////////////////////////////SINGLE PATH CLASS //////////////////////////////////////////
 SinglePath::SinglePath(double start, double end, size_t nbSteps):
 	StartTime(start),
 	EndTime(end),
@@ -22,7 +23,8 @@ std::vector<double> SinglePath::GetAllValues()
 {
 	return Values;
 }
-///////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////RANDOM PROCESS CLASS //////////////////////////////////////////
 
 RandomProcess::RandomProcess(RandomGenerator* Gen,int dim):
 	Generator(Gen),
@@ -80,9 +82,6 @@ double RandomProcess::Get_rate()
 };
 
 
-////////////////////////////////////////////////////////////////////////////////////
-
-
 Brownian1D::Brownian1D(RandomGenerator* Gen):
 	RandomProcess(Gen,1)
 {};
@@ -103,9 +102,8 @@ void Brownian1D::Simulate(double startTime,double endTime,size_t nbSteps)
 		lastInserted =nextValue;
 	}
 	Paths.push_back(Path);
-	// delete Path;
 };	
-//////////////////////////////////////////////////////////////////////////////////////
+
 
 BlackScholes1D::BlackScholes1D(RandomGenerator* Gen, double spot, double rate, double vol):
 	Spot(spot),
@@ -116,7 +114,7 @@ BlackScholes1D::BlackScholes1D(RandomGenerator* Gen, double spot, double rate, d
 	rate_sde = rate;
 
 };
-///////////////////////////////////////////////////////////////////////////////////////
+
 BSEuler1D::BSEuler1D(RandomGenerator* Gen, double spot, double rate, double vol):
 	BlackScholes1D(Gen,spot,rate,vol)
 {};
@@ -132,17 +130,14 @@ void BSEuler1D::Simulate(double startTime,double endTime,size_t nbSteps)
 	
 	for(size_t i = 0; i < nbSteps; ++i)
 	{
-		//std::cout << i << std::endl;
 		double nextValue = lastInserted + lastInserted * (Rate * dt + Vol * Generator->generate() * sqrt(dt));
 		Path->InsertValue(nextValue);
 		lastInserted =nextValue;
 	}
 	
 	Paths.push_back(Path);
-	// delete Path;
 	
 };
-////////////////////////////////////////////////////////////////////////////////////////
 
 BlackScholes2D::BlackScholes2D(RandomGenerator* Gen, double spot1,double spot2,double rate1, double rate2
 		,double vol1,double vol2,double rho):
@@ -196,15 +191,10 @@ void BSEuler2D::Simulate(double startTime,double endTime,size_t nbSteps)
 	
 	Paths.push_back(Path1);
 	Paths.push_back(Path2);
-
-	// delete Path;
 		
 };
 
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-
-BlackScholesND::BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate)
+BlackScholesND::BlackScholesND(GaussianVector* CorrelGaussian, matrix spot_vec,double inputrate)
 	:m_gaussian(CorrelGaussian),
 	V_spot(spot_vec),
 	rate(inputrate)
@@ -212,7 +202,7 @@ BlackScholesND::BlackScholesND(GaussianVectorCholesky* CorrelGaussian, matrix sp
 	rate_sde = inputrate;
 };
 
-BSEulerND::BSEulerND(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate):
+BSEulerND::BSEulerND(GaussianVector* CorrelGaussian, matrix spot_vec,double inputrate):
 	BlackScholesND(CorrelGaussian,spot_vec,inputrate)
 { 
 	rate_sde = inputrate;
@@ -230,56 +220,42 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 	Brownian.Resize(assets, nbSteps);
 	matrix mean_vector(assets, 1);
 
-	//for (size_t i = 0; i < assets; ++i)
-	//{
-		//create the mean_vector at each time step of mu*dt
-		//mean_vector(i, 0) = V_Rate(i, 0) * dt;
-	//}
-
 	for (size_t t = 0; t < nbSteps; ++t)
 	{
 		matrix X = m_gaussian->CorrelatedGaussianVector();
 
 		for (size_t i = 0; i < assets; ++i)
 		{
-			//create the matrix of all brownian motion 
+			//create the matrix of all brownian motions 
 			Brownian(i, t) = X(i, 0);
 		}
-
 	}
 
 	Paths.resize(assets);
 
 	for (size_t i = 0; i < assets; ++i)
 	{
-		// SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
 		Paths[i] = new SinglePath(startTime, endTime, nbSteps);
-
-		//std::cout << i << std::endl;
 		
-		//std::cout << "initial spot " << last_spot << std::endl;
 		last_spot = V_spot(i, 0);
-		//std::cout << last_spot << std::endl;
+
 		next_spot = 0.;
+		
 		Paths[i]->InsertValue(last_spot);
+		
 		for (size_t t = 0; t < nbSteps; ++t)
 		{
-			//std::cout << last_spot << std::endl;
 			next_spot = last_spot * (1+ rate*dt + sqrt(dt)*Brownian(i, t));
 			Paths[i]->InsertValue(next_spot);
 			last_spot = next_spot;
 
 		}
 
-
-		//Paths.push_back(Path);
 	}
 
 };
-//ANTITHETIC TEST
-///////////////////////////////////////////////////////////////////////////////////////////////
 
-BSEulerNDAntithetic::BSEulerNDAntithetic(GaussianVectorCholesky* CorrelGaussian, matrix spot_vec,double inputrate):
+BSEulerNDAntithetic::BSEulerNDAntithetic(GaussianVector* CorrelGaussian, matrix spot_vec,double inputrate):
 	BlackScholesND(CorrelGaussian,spot_vec,inputrate)
 { 
 	rate_sde = inputrate;
@@ -301,15 +277,6 @@ void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSt
 	
 	Brownian.Resize(assets, nbSteps);
 	BrownianAntithetic.Resize(assets, nbSteps);
-	//maturity_spot.Resize(assets, 1);
-	
-	// matrix mean_vector(assets, 1);
-
-	//for (size_t i = 0; i < assets; ++i)
-	//{
-		//create the mean_vector at each time step of mu*dt
-		//mean_vector(i, 0) = V_Rate(i, 0) * dt;
-	//}
 
 	for (size_t t = 0; t < nbSteps; ++t)
 	{
@@ -330,15 +297,13 @@ void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSt
 	
 	for (size_t i = 0; i < assets; ++i)
 	{
-		// SinglePath* Path = new SinglePath(startTime, endTime, nbSteps);
+
 		Paths[i] = new SinglePath(startTime, endTime, nbSteps);
 		PathsAntithetic[i] = new SinglePath(startTime, endTime, nbSteps);
-		//std::cout << i << std::endl;
-		
-		//std::cout << "initial spot " << last_spot << std::endl;
+	
 		last_spot = V_spot(i, 0);
 		last_spotAnti = V_spot(i, 0);
-		//std::cout << last_spot << std::endl;
+
 		next_spot = 0.;
 		next_spotAnti = 0.;
 		
@@ -347,7 +312,6 @@ void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSt
 		
 		for (size_t t = 0; t < nbSteps; ++t)
 		{
-			//std::cout << last_spot << std::endl;
 			next_spot = last_spot * (1+ rate*dt+ sqrt(dt)*Brownian(i, t));
 			next_spotAnti = last_spotAnti * (1 + rate*dt + sqrt(dt)*BrownianAntithetic(i, t));
 			
@@ -357,8 +321,6 @@ void BSEulerNDAntithetic::Simulate(double startTime, double endTime, size_t nbSt
 			last_spot = next_spot;
 			last_spotAnti = next_spotAnti;
 		}
-
-		//Paths.push_back(Path);
 	}
 
 };
