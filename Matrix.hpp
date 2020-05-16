@@ -64,3 +64,5 @@ void appendcol(matrix mat, matrix col);
 matrix LU_decomposition(matrix mat);
 
 matrix VarCovarMatrix(matrix vol,matrix correl);
+
+bool testsymm(matrix v);

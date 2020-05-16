@@ -725,3 +725,19 @@ matrix LU_decomposition(matrix mat)
 	//upper.Print();
 	return lower * upper;
 };
+bool testsymm(matrix v)
+{
+	size_t dim = v.nb_rows();
+	
+	bool rnd = true;
+	
+	for(size_t i = 0; i < dim; i++)
+	{
+		for(size_t j = i+1; j < dim; j++)
+		{
+			if(v(i,j) != v(j,i))
+				rnd = false;
+		}
+	}
+	return rnd;
+};
