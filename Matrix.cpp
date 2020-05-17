@@ -27,7 +27,6 @@ matrix::matrix(std::vector<std::vector<double>> data)
 matrix::matrix(std::vector<double> data, size_t rows)
 : m_nb_rows(1), m_nb_cols(data.size())
 {
-	//std::cout << "enter the function" << std::endl;
 	if (rows == data.size()) 
 	{
 		//create the matrix column 
@@ -49,11 +48,6 @@ matrix::matrix(std::vector<double> data, size_t rows)
 		m_nb_cols = rows;
 		m_data.resize(1);
 		m_data[0] = data;
-		//for (size_t r = 0; r < rows; r++)
-		//{
-		//	m_data[0][r] = data[r];
-
-		//}
 	}
 	
 };
@@ -96,21 +90,18 @@ void matrix::Resize(std::size_t nb_rows, std::size_t nb_cols)
 	{
 		m_data[i].resize(m_nb_cols,0.);
 	}
-	// m_data.resize(m_nb_rows,std::vector<double>(m_nb_cols));
+
 }
 void matrix::Diagonalization()
 {
 	Resize(m_nb_rows,m_nb_rows);
 	
-	// std::cout << m_data.size() << std::endl;
-	// std::cout << m_data[0].size() << std::endl;
+
 	for(size_t i = 0; i<m_nb_rows;++i)
 	{
 		double val = m_data[i][0];
-		// std::cout <<i << std::endl;
 		for(size_t j = 0; j<m_nb_rows;++j)
 		{
-			// std::cout <<j << std::endl;
 			
 			if(i==j)
 			{
@@ -239,7 +230,6 @@ void matrix::addrows(std::vector<std::vector<double>>& data)
 
 {
 	size_t init_size = m_data.size();
-	//std::cout << init_size << std::endl;
 	if ((m_nb_cols != data[0].size()) && (m_nb_cols != 0))
 	{
 		std::cout << "Can't add a row which don't fit the appropriate number of columns" << std::endl;
@@ -252,11 +242,8 @@ void matrix::addrows(std::vector<std::vector<double>>& data)
 		{
 				
 				m_data.resize(data.size());
-				//std::cout << m_data.size() << std::endl;
 				m_data[0].resize(data[0].size(), 0.);
-				//std::cout << m_data[0].size() << std::endl;
 				m_data.push_back(data[0]);
-				//std::cout << m_data.size() << std::endl;
 				m_data.erase(m_data.begin());
 				std::cout << m_data[0][0] << std::endl;
 
@@ -280,27 +267,7 @@ void matrix::addrows(std::vector<std::vector<double>>& data)
 
 				}
 			};
-			
-
-
-			//m_data[r].resize(data[0].size(), 0.);
-
-			//for (size_t c = 0; c < data[0].size(); c++)
-			//{
-			//	//std::cout << init_size << std::endl;
-			//	if (init_size == 0)
-			//	{
-			//		std::cout << "c" << std::endl;
-			//		m_data[r][c] = data[r][c];
-
-			//	}
-			//	else
-			//	{
-			//		//std::cout << "else" << std::endl;
-			//		m_data[r + init_size][c] = data[r][c];
-			//	};
-			//
-			//}
+		
 	
 	}
 };

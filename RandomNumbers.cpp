@@ -150,7 +150,7 @@ Sobol::Sobol(myLong inputseed): QuasiGenerator(inputseed)
 	sequence(n);
 	//Then n = 2 to set the 2D generation
 	n = 2;
-	std::cout<<"Sobol Constructor"<<std::endl;
+	//std::cout<<"Sobol Constructor"<<std::endl;
 	requireNewSimulation = true;
 	
 };
