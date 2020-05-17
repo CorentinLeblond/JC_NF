@@ -293,6 +293,7 @@ matrix AmericanMonteCarlo::C_Hat_regression(matrix Index_time_t, matrix Value)
 	matrix Beta_hat(Phi.size(), 1);
 	matrix C_hat(size_simu, 1);
 
+	//Create the matrix at each time step of the polynome transformation in order to create the regressors
 	for (size_t b = 0; b < Phi.size(); b++)
 
 	{
@@ -312,8 +313,6 @@ matrix AmericanMonteCarlo::C_Hat_regression(matrix Index_time_t, matrix Value)
 
 	inv_SDP_Phi = Inverse(SDP_Phi, SDP_Phi.nb_cols());
 
-	//std::cout << "Inverse of Phi " << std::endl;
-	//inv_SDP_Phi.Print();
 
 	Beta_hat = inv_SDP_Phi * Phi_V;
 
@@ -326,8 +325,6 @@ matrix AmericanMonteCarlo::C_Hat_regression(matrix Index_time_t, matrix Value)
 	Phi_V.Clear();
 	inv_SDP_Phi.Clear();
 	Beta_hat.Clear();
-
-	//C_hat.Print();
 	
 	return C_hat;
 
@@ -336,6 +333,7 @@ matrix AmericanMonteCarlo::C_Hat_regression(matrix Index_time_t, matrix Value)
 
 matrix AmericanMonteCarlo::GetEarlyExec()
 {
+	//return the matrix with optimal stopping time at each time step 
 	matrix res(stopping_time.size(), 1);
 
 	for (size_t j = 0; j < stopping_time.size(); j++)
@@ -349,6 +347,7 @@ matrix AmericanMonteCarlo::GetEarlyExec()
 
 matrix AmericanMonteCarlo::Final_Discounting(matrix simulated_price, std::vector<size_t> optimal_stopping_time, double dt, double rate) 
 {
+	//discount each simulated price at the appropriate discount factor taking into account the optimal stopping time 
 	matrix final_discounted_payoff(simulated_price.nb_rows(), 1);
 
 	for (size_t i = 0; i < simulated_price.nb_rows(); i++)
@@ -413,6 +412,7 @@ void AmericanMonteCarlo_basket::Simulate(double start, double end, size_t steps)
 
 	double dt_sde = m_diffusion->Get_Dt();
 	double df = exp(-r*dt_sde);
+
 	// Regression part 
 	for (size_t t = steps - 2; t > 0; t--)
 	{
@@ -455,10 +455,9 @@ void AmericanMonteCarlo_basket::Simulate(double start, double end, size_t steps)
 			if ((ITM(i, 0) == 1) && (Payoff->operator()(Index(is_ITM[c], t)) > C_hat(c, 0)))
 			{
 
-				simulated_price(i, 0) = Payoff->operator()(Index(is_ITM[c], t)); //exp(-r*(t-start)*dt_sde)*
+				simulated_price(i, 0) = Payoff->operator()(Index(is_ITM[c], t)); 
 				stopping_time[i] = t;
 				c += 1;
-				//std::cout << simulated_price(i, 0) << std::endl;
 			}
 
 		
@@ -468,7 +467,6 @@ void AmericanMonteCarlo_basket::Simulate(double start, double end, size_t steps)
 				stopping_time[i] = stopping_time[i];
 			}
 
-			//std::cout << stopping_time[i] << std::endl;
 		}
 
 		It_mat.Clear();
@@ -476,9 +474,9 @@ void AmericanMonteCarlo_basket::Simulate(double start, double end, size_t steps)
 		It.clear();
 		V.clear();
 		is_ITM.clear();
-		//std::cout << simulated_price.mean() << std::endl;
 	}
 	increment:
+		//increment is to take into account the possible fact that there are no path ITM and avoid creating empty matrix 
 		for (size_t i = 0; i < ITM.nb_rows(); i++)
 		{
 			simulated_price(i, 0) = simulated_price(i, 0);
@@ -587,7 +585,6 @@ void AmericanMonteCarlo_basket_controlevariable::Simulate(double start, double e
 				ITM(i, 0) = 1;
 				It.push_back(Index(i, t));
 				V.push_back(df * simulated_price(i, 0));
-				//V.push_back(df * Payoff->operator()(Index(i, t)));
 				is_ITM.push_back(i);
 			}
 			else { ITM(i, 0) = -1; };
@@ -597,7 +594,6 @@ void AmericanMonteCarlo_basket_controlevariable::Simulate(double start, double e
 				ITM2(i, 0) = 1;
 				It_2.push_back(log_Index(i, t));
 				V_2.push_back(df * simulated_price_CP(i, 0));
-				//V_2.push_back(df * CPayoff->operator()(log_Index(i, t)));
 				is_ITM_2.push_back(i);
 			}
 			else { ITM2(i, 0) = -1; };
@@ -648,7 +644,6 @@ void AmericanMonteCarlo_basket_controlevariable::Simulate(double start, double e
 					stopping_time_CP[i] = stopping_time_CP[i];
 				}
 
-				//CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
 
 			}
 
@@ -671,7 +666,6 @@ void AmericanMonteCarlo_basket_controlevariable::Simulate(double start, double e
 		{ 
 			simulated_price(i, 0) = simulated_price(i, 0); 
 			simulated_price_CP(i, 0) = simulated_price_CP(i, 0);
-			//CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
 		}
 	}
 
@@ -735,7 +729,6 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
 
-		//std::cout << "simulation " << s << std::endl;
 		if (s % 2 == 0)
 		{
 		m_diffusion->Simulate(start, end, steps);
@@ -798,7 +791,6 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 			{
 				ITM(i, 0) = 1;
 				V.push_back(df * simulated_price(i, 0));
-				//V.push_back(df * Payoff->operator()(Index(i, t)));
 				It.push_back(Index(i, t));
 				is_ITM.push_back(i);
 
@@ -809,7 +801,6 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 			{
 				ITM_anti(i, 0) = 1;
 				V_anti.push_back(df * simulated_price_anti(i, 0));
-				//V_anti.push_back(df * Payoff->operator()(Index_anti(i, t)));
 				It_anti.push_back(Index_anti(i, t));
 				is_ITM_anti.push_back(i);
 			}
@@ -863,7 +854,6 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 					stopping_time_anti[i] = stopping_time_anti[i];
 				}
 
-				//average_price(i, 0) = (simulated_price_anti(i, 0) + simulated_price(i, 0)) * 0.5;
 			}
 
 			It_mat.Clear();
@@ -883,7 +873,6 @@ void AmericanMonteCarlo_basket_Antithetic::Simulate(double start, double end, si
 		{
 			simulated_price(i, 0) = simulated_price(i, 0);
 			simulated_price_anti(i, 0) = simulated_price_anti(i, 0);
-			//(i, 0) = (simulated_price_anti(i, 0) + simulated_price(i, 0)) * 0.5;
 		}
 	}
 
@@ -996,7 +985,6 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 			simulated_price(k_a, 0) = Payoff->operator()(Index(k_a, Index.nb_cols() - 1));
 			simulated_price_CP(k_a, 0) = CPayoff->operator()(log_Index(k_a, log_Index.nb_cols() - 1));
 
-			//k += 1;
 
 		}
 		else
@@ -1067,7 +1055,6 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 			{
 				ITM(i, 0) = 1;
 				V.push_back(df* simulated_price(i, 0));
-				//V.push_back(df * Payoff->operator()(Index(i, t)));
 				It.push_back(Index(i, t));
 				is_ITM.push_back(i);
 			}
@@ -1077,7 +1064,6 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 			{
 				ITM2(i, 0) = 1;
 				V_2.push_back(df* simulated_price_CP(i, 0));
-				//V_2.push_back(df* CPayoff->operator()(log_Index(i, t)));
 				It_2.push_back(log_Index(i, t));
 				is_ITM_2.push_back(i);
 
@@ -1089,7 +1075,6 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 			{
 				ITM_anti(i, 0) = 1;
 				V_anti.push_back(df* simulated_price_anti(i, 0));
-				//V_anti.push_back(df* Payoff->operator()(Index_anti(i, t)));
 				It_anti.push_back(Index_anti(i, t));
 				is_ITM_anti.push_back(i);
 			}
@@ -1100,7 +1085,6 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 			{
 				ITM2_anti(i, 0) = 1;
 				V_anti_2.push_back(df* simulated_price_CP_anti(i, 0));
-				//V_anti_2.push_back(df* CPayoff->operator()(log_Index_anti(i, t)));
 				It_anti_2.push_back(log_Index_anti(i, t));
 				is_ITM_anti_2.push_back(i);
 			}
@@ -1192,13 +1176,6 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 					stopping_time_anti_CP[i] = stopping_time_anti_CP[i];
 				}
 
-				//temp = simulated_price(i, 0) - simulated_price_CP(i, 0);
-				//temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0);
-
-				//average_price(i, 0) = (temp + temp_anti) * 0.5 + ExpPriceClsForm;
-
-				//temp = 0.;
-				//temp_anti = 0.;
 			}
 
 			It_mat.Clear();
@@ -1232,12 +1209,6 @@ void AmericanMonteCarlo_basket_Antithetic_CV::Simulate(double start, double end,
 				simulated_price_CP(i, 0) = simulated_price_CP(i, 0);
 				simulated_price_CP_anti(i, 0) =simulated_price_CP_anti(i, 0);
 				simulated_price_anti(i, 0) =simulated_price_anti(i, 0);
-
-				//temp = simulated_price(i, 0) - simulated_price_CP(i, 0);
-				//temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0);
-
-				//average_price(i, 0) = (temp + temp_anti) * 0.5 + ExpPriceClsForm;
-
 			
 			}
 	}
@@ -1364,7 +1335,6 @@ void Bermudean_BasketOption::Simulate(double start, double end, size_t steps)
 				ITM(i, 0) = 1;
 				It.push_back(Index(i,t));
 				V.push_back(df * simulated_price(i, 0));
-				//V.push_back(df * Payoff->operator()(Index(i, t)));
 				is_ITM.push_back(i);
 				
 			}
@@ -1527,7 +1497,6 @@ void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 			{
 				ITM(i, 0) = 1;
 				V.push_back(df * simulated_price(i, 0));
-				//V.push_back(df*Payoff->operator()(Index(i, t)));
 				It.push_back(Index(i, t));
 				is_ITM.push_back(i);
 			}
@@ -1537,7 +1506,6 @@ void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 			{
 				ITM2(i, 0) = 1;
 				V_2.push_back(df * simulated_price_CP(i, 0));
-				//V_2.push_back(df * CPayoff->operator()(log_Index(i, t)));
 				It_2.push_back(log_Index(i, t));
 				is_ITM_2.push_back(i);
 			}
@@ -1592,7 +1560,6 @@ void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 						stopping_time_CP[i] = stopping_time_CP[i];
 					}
 
-					//CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
 					
 
 
@@ -1620,7 +1587,6 @@ void Bermudean_BasketOption_CV::Simulate(double start, double end, size_t steps)
 
 				simulated_price(i, 0) = simulated_price(i, 0);
 				simulated_price_CP(i, 0) = simulated_price_CP(i, 0);
-				//CV(i, 0) = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
 			}
 		}
 	
@@ -1684,7 +1650,6 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
 
-		//std::cout << "simulation " << s << std::endl;
 		if (s % 2 == 0)
 		{
 			m_diffusion->Simulate(start, end, steps);
@@ -1757,7 +1722,6 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 				ITM(i, 0) = 1;
 				It.push_back(Index(i, t));
 				V.push_back(df * simulated_price(i, 0));
-				//V.push_back(df * Payoff->operator()(Index(i, t)));
 				is_ITM.push_back(i);
 			}
 			else { ITM(i, 0) = -1; };
@@ -1767,7 +1731,6 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 				ITM_anti(i, 0) = 1;
 				It_anti.push_back(Index_anti(i, t));
 				V_anti.push_back(df * simulated_price_anti(i, 0));
-				//V_anti.push_back(df*Payoff->operator()(Index_anti(i, t)));
 				is_ITM_anti.push_back(i);
 			}
 			else { ITM_anti(i, 0) = -1; };
@@ -1822,7 +1785,7 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 					stopping_time_anti[i] = stopping_time_anti[i];
 				}
 
-				//average_price(i, 0) = (simulated_price_anti(i, 0) + simulated_price(i, 0)) * 0.5;
+				
 			}
 
 			V_anti.clear();
@@ -1845,7 +1808,7 @@ void Bermudean_BasketOption_antithetic::Simulate(double start, double end, size_
 		{
 			simulated_price(i, 0) = simulated_price(i, 0);
 			simulated_price_anti(i, 0) = simulated_price_anti(i, 0);
-			//average_price(i, 0) = (simulated_price_anti(i, 0) + simulated_price(i, 0)) * 0.5;
+			
 		}
 		
 	}
@@ -1940,7 +1903,7 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 	for (size_t s = 0; s < m_Simulation; s++)
 	{
 
-		//std::cout << "simulation " << s << std::endl;
+		
 		if (s % 2 == 0)
 		{
 			m_diffusion->Simulate(start, end, steps);
@@ -2051,7 +2014,6 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 			{
 				ITM(i, 0) = 1;
 				V.push_back(df * simulated_price(i, 0));
-				//V.push_back(df* Payoff->operator()(Index(i, t)));
 				It.push_back(Index(i, t));
 				is_ITM.push_back(i);
 
@@ -2063,7 +2025,6 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 			{
 				ITM2(i, 0) = 1;
 				V_2.push_back(df * simulated_price_CP(i, 0));
-				//V_2.push_back(df* CPayoff->operator()(log_Index(i, t)));
 				It_2.push_back(log_Index(i, t));
 				is_ITM_2.push_back(i);
 
@@ -2087,7 +2048,6 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 			{
 				ITM2_anti(i, 0) = 1;
 				V_anti_2.push_back(df * simulated_price_CP_anti(i, 0));
-				//V_anti_2.push_back(df* CPayoff->operator()(log_Index_anti(i, t)));
 				It_anti_2.push_back(log_Index_anti(i, t));
 				is_ITM_anti_2.push_back(i);
 
@@ -2183,10 +2143,6 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 					stopping_time_CP_anti[i] = stopping_time_CP_anti[i];
 				}
 
-				//temp = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
-				//temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0) + ExpPriceClsForm;
-
-				//average_price(i, 0) = (temp + temp_anti) * 0.5;
 
 			}
 		
@@ -2225,10 +2181,6 @@ void Bermudean_BasketOption_antithetic_CV::Simulate(double start, double end, si
 
 				simulated_price_anti(i, 0) = simulated_price_anti(i, 0);
 				simulated_price_CP_anti(i, 0) = simulated_price_CP_anti(i, 0);
-			//	temp = simulated_price(i, 0) - simulated_price_CP(i, 0) + ExpPriceClsForm;
-			//	temp_anti = simulated_price_anti(i, 0) - simulated_price_CP_anti(i, 0) + ExpPriceClsForm;
-
-			//	average_price(i, 0) = (temp + temp_anti) * 0.5;
 				
 			}
 

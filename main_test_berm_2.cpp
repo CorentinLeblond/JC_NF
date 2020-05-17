@@ -21,15 +21,16 @@ int main(int argc, char* argv[])
 
 	size_t N = 2000;
 
-	std::vector<std::vector<double>> Spot_vector = { {95.},{120.},{80.} };
+	std::vector<std::vector<double>> Spot_vector = { {105.},{100.},{100.} ,{98.} };
 
-	std::vector<std::vector<double>> Sigma_vector = { {0.25},{0.20},{0.15} };
+	std::vector<std::vector<double>> Sigma_vector = { {0.4},{0.32},{0.38},{0.24} };
 
-	std::vector<std::vector<double>> Correl_mat = { {1.,-0.2,0.4},
-													{-0.2,1.,0.4},
-												   {0.4,0.4,1.} };
+	std::vector<std::vector<double>> Correl_mat = { {1.,-0.25,0.4,0.15},
+													{-0.25,1.,-0.1,0.2},
+												   {0.4,-0.1,1.,-0.2},
+												   {0.15,0.2,-0.2,1.} };
 
-	std::vector<std::vector<double>> Weights_m = { {0.3,0.5,0.2} };
+	std::vector<std::vector<double>> Weights_m = { {0.2,0.35,0.25,0.2} };
 
 	matrix spot_m(Spot_vector);
 	matrix Sigma(Sigma_vector);
@@ -360,7 +361,6 @@ int main(int argc, char* argv[])
 	delete ngen_sobol_S;
 	delete vectorG_sobol_S;
 	delete BSamerican_sobol_S;
-
 
 ///////////////////////////////////// VARIANCE REDUCTION TECHNIQUES ////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -961,7 +961,7 @@ int main(int argc, char* argv[])
 	delete vectorG_sobol_antiS;
 	delete BSamerican_sobol_antiS;
 
-	//////////////////////////// VC + Antithetic /////////////////////////////////////////////////////////////////////
+//////////////////////////// VC + Antithetic /////////////////////////////////////////////////////////////////////
 
 //////////////////////// 4.1) VC + Antithetic (Ecuyer Combined - Laguerre polynome n = 2) ////////////////////////////
 
@@ -1247,7 +1247,6 @@ int main(int argc, char* argv[])
 	delete ngen_sobol_anti_cvS;
 	delete vectorG_sobol_anti_cvS;
 	delete BSamerican_sobol_anti_cvS;
-
 	return 0;
 
 	}
