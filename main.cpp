@@ -15,23 +15,25 @@ int main(int argc, char* argv[])
 	double startTime = 0.;
 	double endTime = 1.;
 	size_t nbsteps = 252;
-	size_t Nb_Assets = 4;
+	size_t Nb_Assets = 3;
 	double rate = 0.05;
-	double K = 100.;
+	double K = 100;
 	
-	std::vector<std::vector<double>> Spot_vector = {{105.},{100.},{100.},{98.}};
+	std::vector<std::vector<double>> Spot_vector = {{100},{120},{80}};
 
-	std::vector<std::vector<double>> Sigma_vector = {{0.4},{0.32},{0.38},{0.24}};
-	
-	std::vector<std::vector<double>> Correl_mat = {{1.,-0.25,0.4,0.15},
-												   {-0.25,1.,-0.1,0.2},
-												   {0.4,-0.1,1.,-0.2},
-												   {0.15,0.2,-0.2,1.}};
+	std::vector<std::vector<double>> Sigma_vector = {{0.25},{0.20},{0.15}};
+
+	std::vector<std::vector<double>> Nu_vector = {{rate},{rate},{rate}};
+
+	std::vector<std::vector<double>> Correl_mat = {{1,-0.2,0.4},
+												   {-0.2,1,0.4},
+												   {0.4,0.4,1}};
 												   
-	std::vector<std::vector<double>> Weights_mat ={{0.2,0.35,0.25,0.2}};
+	std::vector<std::vector<double>> Weights_mat ={{0.3,0.5,0.2}};
 	
 	matrix spot_m(Spot_vector);
 	matrix Sigma(Sigma_vector);
+	matrix Nu(Nu_vector);
 	matrix Correl(Correl_mat);
 	matrix Weights(Weights_mat);
 	matrix CovarMatrix = VarCovarMatrix(Sigma, Correl);
@@ -105,9 +107,10 @@ int main(int argc, char* argv[])
 	
 
 /////////////////////////////////////////////////////////////////////////////////////
-	UniformGenerator* ugen = new Sobol();
+	UniformGenerator* ugen = new EcuyerCombined();
 	
 	Normal* ngen;
+	
 	try
 	{
 	ngen = new NormalBoxMuller(ugen, 0., 1.);
@@ -116,153 +119,55 @@ int main(int argc, char* argv[])
 	{	
 	   std::cout << "ERREUR : " << e.what() << std::endl;
 	}
+	
 	GaussianVector* gvec;
+	
 	double determinant = determinantOfMatrix(CovarMatrix,CovarMatrix.nb_rows());
+	
 	if(determinant == 0.)
 	{
 		gvec = new GaussianVectorDiag(ngen,  Sigma,  Correl, CovarMatrix);
 	}
 	else
 	{
-		gvec = new GaussianVectorCholesky(ngen,  Sigma,  Correl, CovarMatrix);
+		gvec = new GaussianVectorCholesky(ngen,  Sigma,  Correl, CovarMatrix); //More efficient method
 	}
-
 	
+	RandomProcess* path = new BSEulerND(gvec,spot_m,rate);
+	PayOffBasket* bsktcall = new PayOffBasketCall(Weights, spot_m,K);
+
+	//MONTE CARLO
+	double tolerated_error = 0.01;
+	size_t CompMC_Nb_Simulation = 2000;
+	
+	EuropeanBasket MC(CompMC_Nb_Simulation, bsktcall, path);
+	
+	//First Run: Companion MC to determinate the optimal number of simulation
+	
+	clock::time_point startComp = clock::now();
+	MC.Simulate(startTime,endTime,nbsteps);
+	clock::time_point endComp = clock::now();	
+	clock::duration execution_timeComp = endComp - startComp;
+
+	MC.OptimalNbSimul(tolerated_error);
+	
+	size_t Optimal_Nb_Simulation = MC.GetNbSimul();
+	
+	std::cout << "NB SIMULATION COMP: " << CompMC_Nb_Simulation << std::endl;
+	std::cout << "ERROR TOLERATED: " << tolerated_error << std::endl;
+	std::cout << "PRIX COMP: " << MC.GetPrice() << std::endl;
+	std::cout << "Variance COMP: " << MC.GetVariance() << std::endl;
+	std::cout << "NB SIMULATION OPTI: " << Optimal_Nb_Simulation << std::endl;
+	std::cout << "EXECUTION TIME COMP: " << std::chrono::duration 
+	<double,std::ratio<1>> (execution_timeComp).count() << std::endl;
 	
 	delete ugen;
 	delete ngen;
 	delete gvec;
-
-/*	
-	UniformGenerator* ugen = new Sobol();
-	UniformGenerator* ugen1 = new EcuyerCombined();
-	
-	matrix test(5000,2);
-	for(size_t i = 0;i<5000;++i)
-	{
-		double a = ugen->generate();
-		double b = ugen1->generate();
-		test(i,0) = a;
-		test(i,1) = b;
-		
-	}
-	
-	test.CSV("Quasi-comp-ecuyer-LargeSample.csv");
-	delete ugen;
-	delete ugen1;
-*/
-
-/*
-	UniformGenerator* ugen = new EcuyerCombined();
-	Normal* ngen = new NormalBoxMuller(ugen, 0., 1.);
-	GaussianVectorCholesky* corrG = new GaussianVectorCholesky(ngen, Sigma, Correl, CovarMatrix);
-	
-	//RANDOM PROCESS
-	
-	matrix process;
-	matrix process2;
-	
-	RandomProcess* path = new BSEulerNDAntithetic(corrG,spot_m,rate);
-	
-	path->Simulate(startTime, endTime, nbsteps);
-	
-	process = path->GetAllPaths();
-	process2 = path->GetAllPathsAnti();
-	
-	process.CSV("3D-Process.csv");
-	process2.CSV("3D-Process-Antithetic.csv");
-	
-	delete ugen;
-	delete ngen;
-	delete corrG;
 	delete path;
-*/
-
-/*
-	std::cout<<"LowerDiag Cholesky"<<std::endl;
-	matrix LowerDiag = CovarMatrix.Cholesky();
-	LowerDiag.Print();
+	delete bsktcall;
 	
-	matrix v(CovarMatrix.nb_rows(),CovarMatrix.nb_rows());
-	matrix d(CovarMatrix.nb_rows(),1);
-	int n = CovarMatrix.nb_rows();
-	int nrot= 0;
-	jacobi(CovarMatrix,n,d, v, nrot);
 	
-	std::cout<<"CovarMatrix after function called"<<std::endl;
-	CovarMatrix.Print();
-	std::cout<<"d matrix of eigevalues"<<std::endl;
-	d.Print();
-	std::cout<<"v matrix of eigenvectors"<<std::endl;
-	v.Print();
-	std::cout<<"nrot"<<nrot<<std::endl;
-	
-	d.Diagonalization();
-	std::cout<<"d matrix of eigevalues"<<std::endl;
-	d.Print();
-	std::cout<<"d sqrt"<<std::endl;
-	d.SQRT();
-	d.Print();
-	matrix l = v*d;
-	std::cout<<"output matrix"<<std::endl;
-	l.Print();
-*/
-/*
-    std::cout<<"test diag wiki"<<std::endl;
-	std::vector<std::vector<double>> test_vec = {{6.8,2.4},
-												{2.4,8.2}};
-	matrix test_mat(test_vec);
-	matrix v(test_mat.nb_rows(),test_mat.nb_rows());
-	matrix d(test_mat.nb_rows(),1);
-	int n = test_mat.nb_rows();
-	int nrot= 0;
-	jacobi(test_mat,n,d, v, nrot);
-						
-	std::cout<<"test diag wiki output"<<std::endl;
-	std::cout<<"d matrix of eigevalues"<<std::endl;
-	d.Print();
-	std::cout<<"v matrix of eigenvectors"<<std::endl;
-	v.Print();
-	std::cout<<"nrot"<<nrot<<std::endl;
-	std::cout<<"test diag class"<<std::endl;	
-	*/
-	
-/*
-	UniformGenerator* ugen = new EcuyerCombined();
-	Normal* ngen = new NormalBoxMuller(ugen, 0., 1.);
-
-	GaussianVector* corrG = new GaussianVectorDiag(ngen, Sigma, Correl, CovarMatrix);
-	GaussianVector* corrG2 = new GaussianVectorCholesky(ngen, Sigma, Correl, CovarMatrix);
-	
-	matrix t = corrG->GetB();
-	matrix t2 = corrG2->GetB();
-	std::cout<<"output matrix"<<std::endl;
-	t.Print();
-	std::cout<<"output matrix"<<std::endl;
-	t2.Print();
-	
-	delete ugen;
-	delete ngen;
-	delete corrG;
-	delete corrG2;
-*/
-
-/*	
-// determinantOfMatrix(matrix mat, size_t n)
-std::cout<<"Test Determinant"<<std::endl;
-std::vector<std::vector<double>> test_vec = {{6,1,1},
-											{4,-2,5},
-											{2,8,7}};
-matrix m(test_vec);
-
-double det = determinantOfMatrix(CovarMatrix,CovarMatrix.nb_rows());
-
-std::cout<<"det "<<det<<std::endl;
-
-
-*/
-/////////////////////////////////////////////////////////////////////////////////////
-
 //1. NO VARIANCE REDUCTION
 
 	// RANDOM NUMBER GENERATION

@@ -147,23 +147,7 @@ class Sobol: public QuasiGenerator
 	
 };
 int IMIN(int a,int b);
-// class Kakutani: public QuasiGenerator
-// {
-	// public:
-	
-		// Kakutani(myLong inputseed);
-		// ~Kakutani(){};
-		
-		// double generate();
- 
-	// private:
-	
-		// int n;
-		// int base;
-		// double bk;
-		// double q;
-	
-// };
+
 //////////////////////////////////////////////////////////////////////
 
 class ContinuousGenerator :public RandomGenerator

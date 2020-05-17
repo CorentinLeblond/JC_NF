@@ -1,5 +1,7 @@
 #include "sde.hpp"
 
+/* This file contains all algorithms related to the generation of SDEs */
+
 ///////////////////////////////SINGLE PATH CLASS //////////////////////////////////////////
 SinglePath::SinglePath(double start, double end, size_t nbSteps):
 	StartTime(start),
@@ -254,6 +256,10 @@ void BSEulerND::Simulate(double startTime, double endTime, size_t nbSteps)
 	}
 
 };
+
+
+/* The below class works exactly the same as the BSeulerND class, but each time we
+call the method simulate, we store 2 paths instead of only one */
 
 BSEulerNDAntithetic::BSEulerNDAntithetic(GaussianVector* CorrelGaussian, matrix spot_vec,double inputrate):
 	BlackScholesND(CorrelGaussian,spot_vec,inputrate)

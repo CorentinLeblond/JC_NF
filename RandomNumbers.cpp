@@ -3,7 +3,10 @@
 
 #define MAXBIT 30
 #define MAXDIM 6
-//////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/*This file contains all algorithms used to generate random distributions, from uniform to correlated gaussian vectors */
+
 double RandomGenerator::mean(myLong nbSim)
 {
 
@@ -104,6 +107,9 @@ double EcuyerCombined::generate()
 	return result;
 };
 //////////////////////////////////////////////////////////////////////
+
+/*Class used to generate quasi random monte carlo (Sobol and VanDerCorput)*/
+
 QuasiGenerator::QuasiGenerator(myLong inputseed):
 	seed(inputseed)
 {
@@ -123,12 +129,11 @@ double VanDerCorput::generate()
 	while(n>0)
 	{
 		q += (n % base)*bk;
-		// std::cout << "modula =  " << n % base << std::endl;
-		// std::cout << "q =  " << q << std::endl;
+
 		n /= base;
-		// std::cout << "n = " << n << std::endl;
+
 		bk /= base;
-		// std::cout << "bk = " << bk << std::endl;
+
 	}
 	
 	current+=1;
@@ -137,8 +142,13 @@ double VanDerCorput::generate()
 ////////////////////////////////////////////////////////////////////////////////
 Sobol::Sobol(myLong inputseed): QuasiGenerator(inputseed)
 {
+	//We make use of the Sobol Sequence into the Box Muller Normal Generator
+	//We generate a 2D Sobol sequence to obtain two independent distributions 
+	
+	//Call once with n as negative value to initialize the generation of the sequence
 	n = -1;
 	sequence(n);
+	//Then n = 2 to set the 2D generation
 	n = 2;
 	std::cout<<"Sobol Constructor"<<std::endl;
 	requireNewSimulation = true;
@@ -147,20 +157,20 @@ Sobol::Sobol(myLong inputseed): QuasiGenerator(inputseed)
 
 double Sobol::generate()
 {
+	//Each time the method is called, we generate a draw (2D) and return either the first dimension or the second one
 	if(requireNewSimulation == true) 
 	{
-		// std::cout<<"Sobol Sequence generation"<<std::endl;
 		sequence(n);
-		// std::cout<<"Sobol Sequence generation Done"<<std::endl;
+
 		requireNewSimulation = false;
-		// std::cout<<"0D elemente: "<<x[0]<<std::endl;
-		// std::cout<<"1D elemente: "<<x[1]<<std::endl;
-		// std::cout<<"size: "<<x.size()<<std::endl;
+
+		//Return 1D sequence
 		return x[1];
 	}
 	else
 	{
 		requireNewSimulation = true;
+		//Return 2nd Dimension result
 		return x[2];
 		
 	}
@@ -225,21 +235,14 @@ void Sobol::sequence(int inputn)
 		}
 	}
 };
-// int Sobol::GetN()
-// {
-	// return n;
-// };
+
 int IMIN(int a,int b)
 {
 	if(a <= b) return a;
 	
 	if(a > b) return b;
 };
-////////////////////////////////////////////////////////////////////////////////
-// Kakutani::Kakutani(myLong inputseed):
-	// QuasiGenerator(inputseed)
-// {
-// };
+
 //////////////////////////////////////////////////////////////////////
 const long double PI = 3.141592653589793238L;
 
@@ -337,7 +340,8 @@ double NormalBoxMullerVDC::generate()
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-//Constructor, we use it to compute the covariance matrix thanks to inputs, it will be used in classes filles
+// Correlated Gaussian Vector Generation
+
 GaussianVector::GaussianVector(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar):
 	Ngnr(inputngnr),
 	Sigma(inputSigma), //Vector of vol for all assets
@@ -354,9 +358,8 @@ matrix GaussianVector::GetB()
 GaussianVectorCholesky::GaussianVectorCholesky(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar)
 	: GaussianVector(inputngnr, inputSigma,  inputcorrel, inputvarcovar)
 {
+	//Generates the lower triangular matrix in the constructor from the method in matrix.cpp
 	B = CovarMatrix.Cholesky();
-	//std::cout << "Lower cholesky" <<std::endl;
-	//LowerCholesly.Print();
 };
 
 matrix GaussianVectorCholesky::CorrelatedGaussianVector()
@@ -367,18 +370,11 @@ matrix GaussianVectorCholesky::CorrelatedGaussianVector()
 	{
 		IndependentGaussian(i,0) = Ngnr->generate();
 	}
-	//std::cout << "IndependentGaussian1:"<<std::endl;
-	//IndependentGaussian.Print();
-	//std::cout << "IndependentGaussian ROWS: " << IndependentGaussian.nb_rows()<<std::endl;
-	//std::cout << "IndependentGaussian COLS: " << IndependentGaussian.nb_cols()<<std::endl;
-	//std::cout << "LowerC:"<<std::endl;
 
 	//Then, we only do the tranformation using the lowercholeskly and the Mu vector already available
 	
 	matrix a = B*IndependentGaussian;
 	
-	//a.Print();
-	// a += Nu;
 	// Our independend Gaussian vector is now a correlated gaussian vector that we return
 	
 	return a;
@@ -387,7 +383,8 @@ matrix GaussianVectorCholesky::CorrelatedGaussianVector()
 GaussianVectorDiag::GaussianVectorDiag(Normal* inputngnr, matrix inputSigma, matrix inputcorrel,matrix inputvarcovar)
 	: GaussianVector(inputngnr, inputSigma,  inputcorrel, inputvarcovar)
 {
-	std::cout<<"GaussianVectorDiag Constructor"<<std::endl;
+	
+	// std::cout<<"GaussianVectorDiag Constructor"<<std::endl;
 	v.Resize(CovarMatrix.nb_rows(),CovarMatrix.nb_rows());
 	d.Resize(CovarMatrix.nb_rows(),1);
 	n = CovarMatrix.nb_rows();
@@ -395,20 +392,15 @@ GaussianVectorDiag::GaussianVectorDiag(Normal* inputngnr, matrix inputSigma, mat
 	jacobi(CovarMatrix,n,d, v, nrot);
 	// std::cout<<"CovarMatrix after function called"<<std::endl;
 	// CovaqrMatrix.Print();
-	std::cout<<"d matrix of eigevalues"<<std::endl;
-	d.Print();
-	std::cout<<"v matrix of eigenvectors (normalized)"<<std::endl;
-	v.Print();
-	std::cout<<"nrotation "<<nrot<<std::endl;
+	// std::cout<<"d matrix of eigevalues"<<std::endl;
+	// d.Print();
+	// std::cout<<"v matrix of eigenvectors (normalized)"<<std::endl;
+	// v.Print();
+	// std::cout<<"nrotation "<<nrot<<std::endl;
 	d.Diagonalization();
-	std::cout<<"d matrix of eigevalues"<<std::endl;
-	d.Print();
-	std::cout<<"d sqrt"<<std::endl;
 	d.SQRT();
 	d.Print();
 	B = v*d;
-	// std::cout<<"output matrix"<<std::endl;
-	// B.Print();
 };
 
 
@@ -441,6 +433,9 @@ matrix GaussianVectorDiag::CorrelatedGaussianVector()
 #define ROTATE(a,i,j,k,l) g=a(i,j);h=a(k,l);a(i,j)=g-s*(h+g*tau);\
 	a(k,l)=h+s*(g-h*tau);
 
+
+//Diagonalization process for a symmetric matrix, we found that this method was the most efficient in our case where we work with the covariance matrix
+//This method works when the matrix is symmetric and it is fairly fast
 void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 {/* 
 	Computes all eigenvalues and eigenvectors of a real symmetric matrix a[1..n][1..n]. On
@@ -455,8 +450,6 @@ void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 	{
 		for(iq=0;iq<n;iq++) v(ip,iq)=0.0;
 		v(ip,ip)=1.0;
-		std::cout<<"should have identity matrix below"<<std::endl;
-		v.Print();
 	}
 	for (ip=0;ip<n;ip++) 
 	{
@@ -538,84 +531,4 @@ void jacobi(matrix& a, int n, matrix& d, matrix& v, int& nrot)
 			z(ip,0)=0.0; 
 		}
 	}
-	// std::cout << "Too many iterations in routine jacobi"<<std::endl;
-}
-
-// #define NR_END 1
-// #define FREE_ARG char*
-// void free_vector(double *v, long nl, long nh)
-// /* free a float vector allocated with vector() */
-// {
-	// free((FREE_ARG) (v+nl-NR_END));
-// }
-// double *vector(long nl, long nh)
-// /* allocate a float vector with subscript range v[nl..nh] */
-// {
-	// double *v;
-	// v=(double *)malloc((size_t) ((nh-nl+1+NR_END)*sizeof(double)));
-	// v=(double *)malloc((size_t) ((nh-nl+NR_END)*sizeof(double)));
-	// if (!v) std::cout<<"allocation failure in vector()"<<std::endl;
-	// return v-nl+NR_END;
-// }
-
-////////////////////////////////////////////////////////////////////
-// Python Version
-		// ## module jacobi
-	// ’’’ lam,x = jacobi(a,tol = 1.0e-9).
-	// Solution of std. eigenvalue problem [a]{x} = lambda{x}
-	// by Jacobi’s method. Returns eigenvalues in vector {lam}
-	// and the eigenvectors as columns of matrix [x].
-	// ’’’
-	// from numarray import array,identity,diagonal
-	// from math import sqrt
-	// def jacobi(a,tol = 1.0e-9):
-	// def maxElem(a): # Find largest off-diag. element a[k,l]
-	// n = len(a)
-	// aMax = 0.0
-	
-	// for i in range(n-1):
-	// for j in range(i+1,n):
-	// if abs(a[i,j]) >= aMax:
-	// aMax = abs(a[i,j])
-	// k = i; l = j
-	// return aMax,k,l
-	// def rotate(a,p,k,l): # Rotate to make a[k,l] = 0
-	// n = len(a)
-	// aDiff = a[l,l] - a[k,k]
-	// if abs(a[k,l]) < abs(aDiff)*1.0e-36: t = a[k,l]/aDiff
-	// else:
-	// phi = aDiff/(2.0*a[k,l])
-	// t = 1.0/(abs(phi) + sqrt(phi**2 + 1.0))
-	// if phi < 0.0: t = -t
-	// c = 1.0/sqrt(t**2 + 1.0); s = t*c
-	// tau = s/(1.0 + c)
-	// temp = a[k,l]
-	// a[k,l] = 0.0
-	// a[k,k] = a[k,k] - t*temp
-	// a[l,l] = a[l,l] + t*temp
-	// for i in range(k): # Case ofi<k
-	// temp = a[i,k]
-	// a[i,k] = temp - s*(a[i,l] + tau*temp)
-	// a[i,l] = a[i,l] + s*(temp - tau*a[i,l])
-	// for i in range(k+1,l): # Case ofk<i<l
-	// temp = a[k,i]
-	// a[k,i] = temp - s*(a[i,l] + tau*a[k,i])
-	// a[i,l] = a[i,l] + s*(temp - tau*a[i,l])
-	// for i in range(l+1,n): # Case ofi>l
-	// temp = a[k,i]
-	// a[k,i] = temp - s*(a[l,i] + tau*temp)
-	// a[l,i] = a[l,i] + s*(temp - tau*a[l,i])
-	// for i in range(n): # Update transformation matrix
-	// temp = p[i,k]
-	// p[i,k] = temp - s*(p[i,l] + tau*p[i,k])
-	// p[i,l] = p[i,l] + s*(temp - tau*p[i,l])
-	// n = len(a)
-	// maxRot = 5*(n**2)
-	// p = identity(n)*1.0 # Initialize transformation matrix
-	// for i in range(maxRot): # Jacobi rotation loop
-	// aMax,k,l = maxElem(a)
-	// if aMax < tol: return diagonal(a),p
-	// rotate(a,p,k,l)
-	// print ’Jacobi method did not converge’
-// };
-
+};
